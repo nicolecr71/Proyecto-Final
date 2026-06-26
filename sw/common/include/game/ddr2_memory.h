@@ -8,6 +8,7 @@
 
 #include "game/game_config.h"
 #include "game/game_state.h"
+#include "game/sprite_bank.h"
 
 /*
  * DDR2 memory map.
@@ -40,6 +41,9 @@ typedef struct {
     uint32_t max_score;
     uint32_t sprite_bank_addr;
     uint32_t framebuffer_shadow_addr;
+    uint32_t ball_speed_x;
+    uint32_t ball_speed_y;
+    uint32_t paddle_speed;
 } ddr2_game_config_t;
 
 static inline void ddr2_write32(uintptr_t address, uint32_t value)
@@ -119,6 +123,9 @@ static inline void ddr2_init_game_config(void)
     config.max_score = MAX_SCORE;
     config.sprite_bank_addr = (uint32_t)DDR2_SPRITE_BANK_ADDR;
     config.framebuffer_shadow_addr = (uint32_t)DDR2_FRAMEBUFFER_SHADOW;
+    config.ball_speed_x = BALL_SPEED_X;
+    config.ball_speed_y = BALL_SPEED_Y;
+    config.paddle_speed = PADDLE_SPEED;
 
     ddr2_copy_to(DDR2_CONFIG_ADDR, &config, sizeof(config));
 }
@@ -131,18 +138,16 @@ static inline void ddr2_store_game_state(const game_state_t *state)
 static inline void ddr2_init_demo_sprite_bank(void)
 {
     uint32_t i;
-    uint16_t sprite_pixel;
-    uintptr_t address;
+    uintptr_t base = DDR2_SPRITE_BANK_ADDR;
 
-    for (i = 0U; i < 64U; i++) {
-        if ((i + (i / 8U)) & 1U) {
-            sprite_pixel = 0x0F0U;
-        } else {
-            sprite_pixel = 0x00FU;
-        }
-
-        address = DDR2_SPRITE_BANK_ADDR + ((uintptr_t)i * sizeof(uint16_t));
-        *((volatile uint16_t *)address) = sprite_pixel;
+    for (i = 0U; i < (SPRITE_BALL_W * SPRITE_BALL_H); i++) {
+        *((volatile uint16_t *)(base + SPRITE_BALL_OFFSET + i * 2U)) = 0x0FFFU;
+    }
+    for (i = 0U; i < (SPRITE_P1_W * SPRITE_P1_H); i++) {
+        *((volatile uint16_t *)(base + SPRITE_P1_OFFSET + i * 2U)) = 0x00FFU;
+    }
+    for (i = 0U; i < (SPRITE_P2_W * SPRITE_P2_H); i++) {
+        *((volatile uint16_t *)(base + SPRITE_P2_OFFSET + i * 2U)) = 0x0FA0U;
     }
 }
 

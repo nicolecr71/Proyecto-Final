@@ -37,6 +37,18 @@ if {[file exists $gen_dir]} {
     file delete -force $gen_dir
 }
 
+# --- Limpiar fuentes RTL, constraints y wrapper obsoletos --------
+puts "=== Limpiando fuentes obsoletas del proyecto ==="
+set old_v [get_files -quiet -filter {FILE_TYPE == "Verilog" || FILE_TYPE == "SystemVerilog"}]
+if {[llength $old_v] > 0} { remove_files $old_v }
+set old_xdc [get_files -quiet -filter {FILE_TYPE == "XDC"}]
+if {[llength $old_xdc] > 0} { remove_files $old_xdc }
+# Eliminar system_wrapper stale (VHDL viejo sin puertos SD)
+set old_wrap [get_files -quiet "*imports/hdl/system_wrapper.vhd"]
+if {[llength $old_wrap] > 0} { remove_files $old_wrap }
+set stale_wrap "Projects/el3313_proyecto2/el3313_proyecto2.srcs/sources_1/imports/hdl/system_wrapper.vhd"
+if {[file exists $stale_wrap]} { file delete -force $stale_wrap }
+
 # --- Recrear el BD con el nuevo SPI para SD ----------------------
 puts "=== Recreando Block Design ==="
 source $bd_tcl_path
@@ -46,14 +58,14 @@ puts "=== Generando wrapper ==="
 set bd_file [get_files system.bd]
 make_wrapper -files [get_files $bd_file] -top -force
 set wrapper [glob -nocomplain \
-    "Projects/el3313_proyecto2/el3313_proyecto2.gen/sources_1/bd/system/hdl/system_wrapper.v"]
+    "Projects/el3313_proyecto2/el3313_proyecto2.gen/sources_1/bd/system/hdl/system_wrapper.v*"]
 if {$wrapper ne ""} {
-    add_files -norecurse $wrapper
+    add_files -norecurse [lindex $wrapper 0]
 } else {
     set wrapper [glob -nocomplain \
-        "Projects/el3313_proyecto2/el3313_proyecto2.srcs/sources_1/bd/system/hdl/system_wrapper.v"]
+        "Projects/el3313_proyecto2/el3313_proyecto2.srcs/sources_1/bd/system/hdl/system_wrapper.v*"]
     if {$wrapper ne ""} {
-        add_files -norecurse $wrapper
+        add_files -norecurse [lindex $wrapper 0]
     }
 }
 
@@ -62,6 +74,9 @@ add_files -norecurse "rtl/io/sync_2ff.v"
 add_files -norecurse "rtl/io/debounce.v"
 add_files -norecurse "rtl/io/input_conditioner.v"
 add_files -norecurse "rtl/top/system_io_wrapper.v"
+
+# --- Agregar constraints -----------------------------------------
+add_files -fileset constrs_1 -norecurse "constraints/constraints.xdc"
 
 set_property top system_io_wrapper [get_filesets sources_1]
 update_compile_order -fileset sources_1

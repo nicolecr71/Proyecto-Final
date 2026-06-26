@@ -2,6 +2,9 @@
 
 #include "game/pong_renderer.h"
 #include "game/game_config.h"
+#include "game/game_params.h"
+#include "game/ddr2_memory.h"
+#include "game/sprite_bank.h"
 #include "vram_memory_map.h"
 
 #define PONG_COLOR_BACKGROUND  VRAM_COLOR_BLACK
@@ -9,7 +12,6 @@
 #define PONG_COLOR_DIM         VRAM_COLOR_GRAY
 #define PONG_COLOR_P1          VRAM_RGB444(0x0, 0xF, 0xF)
 #define PONG_COLOR_P2          VRAM_RGB444(0xF, 0xA, 0x0)
-#define PONG_COLOR_BALL        VRAM_COLOR_WHITE
 
 #define SCREEN_CENTER_LEFT_X   ((GAME_WIDTH / 2U) - 1U)
 
@@ -24,9 +26,6 @@
 #define SCORE_BLOCK_GAP        2U
 #define SCORE_Y                4U
 #define SCORE_CENTER_GAP       6U
-#define SCORE_MAX_WIDTH        ((MAX_SCORE * SCORE_BLOCK_WIDTH) + ((MAX_SCORE - 1U) * SCORE_BLOCK_GAP))
-
-#define SCORE_P1_X             (SCREEN_CENTER_LEFT_X - SCORE_CENTER_GAP - SCORE_MAX_WIDTH + 1U)
 #define SCORE_P2_X             ((GAME_WIDTH / 2U) + SCORE_CENTER_GAP)
 
 #define WAIT_BAR_WIDTH         28U
@@ -36,6 +35,17 @@
 #define WIN_BAR_WIDTH          64U
 #define WIN_BAR_HEIGHT         3U
 #define WIN_BAR_Y              20U
+
+static uint32_t score_max_width(void)
+{
+    uint32_t n = (uint32_t)g_game_params.max_score;
+    return (n * SCORE_BLOCK_WIDTH) + ((n - 1U) * SCORE_BLOCK_GAP);
+}
+
+static uint32_t score_p1_x(void)
+{
+    return SCREEN_CENTER_LEFT_X - SCORE_CENTER_GAP - score_max_width() + 1U;
+}
 
 static void draw_rect(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, uint16_t color)
 {
@@ -52,6 +62,20 @@ static void draw_rect(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, uint16_t
 static void draw_centered_rect(uint32_t y0, uint32_t w, uint32_t h, uint16_t color)
 {
     draw_rect((GAME_WIDTH - w) / 2U, y0, w, h, color);
+}
+
+static void draw_sprite(uint32_t x0, uint32_t y0, uint32_t w, uint32_t h, uint32_t bank_offset)
+{
+    uint32_t x;
+    uint32_t y;
+    const volatile uint16_t *base =
+        (const volatile uint16_t *)(DDR2_SPRITE_BANK_ADDR + (uintptr_t)bank_offset);
+
+    for (y = 0U; y < h; y++) {
+        for (x = 0U; x < w; x++) {
+            vram_write_pixel(x0 + x, y0 + y, base[y * w + x]);
+        }
+    }
 }
 
 static void draw_border(void)
@@ -77,11 +101,9 @@ static void draw_center_line(void)
 
     for (y = CENTER_LINE_START_Y; y < CENTER_LINE_END_Y; y += (CENTER_DASH_HEIGHT + CENTER_DASH_GAP)) {
         dash_end = y + CENTER_DASH_HEIGHT;
-
         if (dash_end > CENTER_LINE_END_Y) {
             dash_end = CENTER_LINE_END_Y;
         }
-
         draw_rect(SCREEN_CENTER_LEFT_X, y, CENTER_LINE_WIDTH, dash_end - y, PONG_COLOR_DIM);
     }
 }
@@ -95,9 +117,10 @@ static void draw_score_bar(uint8_t score, uint32_t x0, uint16_t color)
 {
     uint8_t i;
     uint32_t x;
+    uint8_t limit = g_game_params.max_score;
 
-    if (score > MAX_SCORE) {
-        score = MAX_SCORE;
+    if (score > limit) {
+        score = limit;
     }
 
     for (i = 0U; i < score; i++) {
@@ -108,21 +131,19 @@ static void draw_score_bar(uint8_t score, uint32_t x0, uint16_t color)
 
 static uint16_t get_winner_color(const game_state_t *state)
 {
-    if (state->score_p1 >= MAX_SCORE) {
+    if (state->score_p1 >= g_game_params.max_score) {
         return PONG_COLOR_P1;
     }
-
-    if (state->score_p2 >= MAX_SCORE) {
+    if (state->score_p2 >= g_game_params.max_score) {
         return PONG_COLOR_P2;
     }
-
     return PONG_COLOR_FOREGROUND;
 }
 
 static void draw_hud(const game_state_t *state)
 {
-    draw_score_bar(state->score_p1, SCORE_P1_X, PONG_COLOR_P1);
-    draw_score_bar(state->score_p2, SCORE_P2_X, PONG_COLOR_P2);
+    draw_score_bar(state->score_p1, score_p1_x(), PONG_COLOR_P1);
+    draw_score_bar(state->score_p2, SCORE_P2_X,   PONG_COLOR_P2);
     draw_hud_center_divider();
 
     if (state->status == GAME_WAITING) {
@@ -136,23 +157,25 @@ static void draw_hud(const game_state_t *state)
 
 static void draw_dynamic_objects(const game_state_t *state)
 {
-    draw_rect(PADDLE_MARGIN, state->paddle_p1_y, PADDLE_WIDTH, PADDLE_HEIGHT, PONG_COLOR_P1);
+    draw_sprite(PADDLE_MARGIN,
+                state->paddle_p1_y,
+                SPRITE_P1_W, SPRITE_P1_H,
+                SPRITE_P1_OFFSET);
 
-    draw_rect(
-        GAME_WIDTH - PADDLE_MARGIN - PADDLE_WIDTH,
-        state->paddle_p2_y,
-        PADDLE_WIDTH,
-        PADDLE_HEIGHT,
-        PONG_COLOR_P2
-    );
+    draw_sprite(GAME_WIDTH - PADDLE_MARGIN - PADDLE_WIDTH,
+                state->paddle_p2_y,
+                SPRITE_P2_W, SPRITE_P2_H,
+                SPRITE_P2_OFFSET);
 
-    draw_rect(state->ball_x, state->ball_y, BALL_SIZE, BALL_SIZE, PONG_COLOR_BALL);
+    draw_sprite(state->ball_x,
+                state->ball_y,
+                SPRITE_BALL_W, SPRITE_BALL_H,
+                SPRITE_BALL_OFFSET);
 }
 
 void pong_render_state(const game_state_t *state)
 {
     vram_clear(PONG_COLOR_BACKGROUND);
-
     draw_border();
     draw_center_line();
     draw_hud(state);

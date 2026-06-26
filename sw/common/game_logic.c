@@ -1,9 +1,7 @@
 #include "game/game_logic.h"
 #include "game/game_config.h"
+#include "game/game_params.h"
 
-/*
- * Keeps a paddle inside the logical game area.
- */
 static void clamp_paddle(uint16_t *paddle_y)
 {
     if (*paddle_y > (GAME_HEIGHT - PADDLE_HEIGHT)) {
@@ -11,26 +9,19 @@ static void clamp_paddle(uint16_t *paddle_y)
     }
 }
 
-/*
- * Updates one paddle according to its input.
- */
 static void update_paddle(uint16_t *paddle_y, player_input_t input)
 {
-    if (input.up && (*paddle_y >= PADDLE_SPEED)) {
-        *paddle_y -= PADDLE_SPEED;
+    if (input.up && (*paddle_y >= g_game_params.paddle_speed)) {
+        *paddle_y -= (uint16_t)g_game_params.paddle_speed;
     }
 
     if (input.down) {
-        *paddle_y += PADDLE_SPEED;
+        *paddle_y += (uint16_t)g_game_params.paddle_speed;
     }
 
     clamp_paddle(paddle_y);
 }
 
-/*
- * Updates the game time counters.
- * This assumes that game_update_common() is called at GAME_TICKS_PER_SECOND.
- */
 static void update_time_counters(game_state_t *state)
 {
     state->game_ticks++;
@@ -40,24 +31,20 @@ static void update_time_counters(game_state_t *state)
         (uint16_t)(state->game_ticks / GAME_TICKS_PER_SECOND);
 }
 
-/*
- * Resets ball and paddle positions using a selected horizontal serve direction.
- * Scores and total game time are not cleared here.
- */
 static void game_reset_round_with_direction(game_state_t *state, int16_t serve_direction)
 {
     state->ball_x = GAME_WIDTH / 2;
     state->ball_y = GAME_HEIGHT / 2;
 
     if (serve_direction >= 0) {
-        state->ball_vx = BALL_SPEED_X;
+        state->ball_vx = (int16_t)g_game_params.ball_speed_x;
         state->serve_direction = 1;
     } else {
-        state->ball_vx = -BALL_SPEED_X;
+        state->ball_vx = -(int16_t)g_game_params.ball_speed_x;
         state->serve_direction = -1;
     }
 
-    state->ball_vy = BALL_SPEED_Y;
+    state->ball_vy = (int16_t)g_game_params.ball_speed_y;
 
     state->paddle_p1_y = (GAME_HEIGHT - PADDLE_HEIGHT) / 2;
     state->paddle_p2_y = (GAME_HEIGHT - PADDLE_HEIGHT) / 2;
@@ -66,18 +53,11 @@ static void game_reset_round_with_direction(game_state_t *state, int16_t serve_d
     state->flags |= GAME_FLAG_ROUND_RESET;
 }
 
-/*
- * Resets ball and paddle positions.
- * Scores are not cleared here.
- */
 void game_reset_round(game_state_t *state)
 {
     game_reset_round_with_direction(state, 1);
 }
 
-/*
- * Initializes the full game state.
- */
 void game_init(game_state_t *state)
 {
     state->score_p1 = 0;
@@ -98,15 +78,9 @@ void game_init(game_state_t *state)
 
     game_reset_round(state);
 
-    /*
-     * Clear transient flags after initialization.
-     */
     state->flags = GAME_FLAG_NONE;
 }
 
-/*
- * Checks collision between the ball and player 1 paddle.
- */
 static uint8_t ball_hits_paddle_1(const game_state_t *state)
 {
     uint16_t paddle_x = PADDLE_MARGIN;
@@ -122,9 +96,6 @@ static uint8_t ball_hits_paddle_1(const game_state_t *state)
     return x_collision && y_collision;
 }
 
-/*
- * Checks collision between the ball and player 2 paddle.
- */
 static uint8_t ball_hits_paddle_2(const game_state_t *state)
 {
     uint16_t paddle_x = GAME_WIDTH - PADDLE_MARGIN - PADDLE_WIDTH;
@@ -140,25 +111,16 @@ static uint8_t ball_hits_paddle_2(const game_state_t *state)
     return x_collision && y_collision;
 }
 
-/*
- * Updates ball position, wall collisions, paddle collisions and score.
- */
 static void update_ball(game_state_t *state)
 {
     int32_t next_ball_x = (int32_t)state->ball_x + state->ball_vx;
     int32_t next_ball_y = (int32_t)state->ball_y + state->ball_vy;
 
-    /*
-     * Top wall collision.
-     */
     if (next_ball_y <= 0) {
         next_ball_y = 0;
         state->ball_vy = -state->ball_vy;
     }
 
-    /*
-     * Bottom wall collision.
-     */
     if ((next_ball_y + BALL_SIZE) >= GAME_HEIGHT) {
         next_ball_y = GAME_HEIGHT - BALL_SIZE;
         state->ball_vy = -state->ball_vy;
@@ -167,74 +129,51 @@ static void update_ball(game_state_t *state)
     state->ball_x = (uint16_t)next_ball_x;
     state->ball_y = (uint16_t)next_ball_y;
 
-    /*
-     * Left paddle collision.
-     */
     if (ball_hits_paddle_1(state)) {
         state->ball_x = PADDLE_MARGIN + PADDLE_WIDTH;
-        state->ball_vx = BALL_SPEED_X;
+        state->ball_vx = (int16_t)g_game_params.ball_speed_x;
         state->serve_direction = 1;
     }
 
-    /*
-     * Right paddle collision.
-     */
     if (ball_hits_paddle_2(state)) {
         state->ball_x = GAME_WIDTH - PADDLE_MARGIN - PADDLE_WIDTH - BALL_SIZE;
-        state->ball_vx = -BALL_SPEED_X;
+        state->ball_vx = -(int16_t)g_game_params.ball_speed_x;
         state->serve_direction = -1;
     }
 
-    /*
-     * Player 2 scores when the ball leaves the left side.
-     */
     if (next_ball_x <= 0) {
         state->score_p2++;
         state->last_point = 2;
         state->flags |= GAME_FLAG_P2_SCORED;
-
         game_reset_round_with_direction(state, 1);
     }
 
-    /*
-     * Player 1 scores when the ball leaves the right side.
-     */
     if ((next_ball_x + BALL_SIZE) >= GAME_WIDTH) {
         state->score_p1++;
         state->last_point = 1;
         state->flags |= GAME_FLAG_P1_SCORED;
-
         game_reset_round_with_direction(state, -1);
     }
 
-    /*
-     * Match end condition.
-     */
-    if (state->score_p1 >= MAX_SCORE) {
+    if (state->score_p1 >= g_game_params.max_score) {
         state->winner = 1;
         state->status = GAME_OVER;
         state->flags |= GAME_FLAG_GAME_OVER;
     }
 
-    if (state->score_p2 >= MAX_SCORE) {
+    if (state->score_p2 >= g_game_params.max_score) {
         state->winner = 2;
         state->status = GAME_OVER;
         state->flags |= GAME_FLAG_GAME_OVER;
     }
 }
 
-/*
- * Common update used by local mode and master mode.
- */
 static void game_update_common(
     game_state_t *state,
     player_input_t p1,
     player_input_t p2
 )
 {
-    /*
-     * Clear transient event flags at the beginning of each update.
-     */
     state->flags = GAME_FLAG_NONE;
 
     if (p1.reset || p2.reset) {
@@ -255,19 +194,13 @@ static void game_update_common(
     }
 
     update_time_counters(state);
-
     update_paddle(&state->paddle_p1_y, p1);
     update_paddle(&state->paddle_p2_y, p2);
-
     update_ball(state);
 
     state->frame_id++;
 }
 
-/*
- * Local mode:
- * one FPGA reads both players locally.
- */
 void game_update_local(
     game_state_t *state,
     player_input_t p1,
@@ -277,10 +210,6 @@ void game_update_local(
     game_update_common(state, p1, p2);
 }
 
-/*
- * Master mode:
- * master uses local player 1 and remote player 2 input.
- */
 void game_update_master(
     game_state_t *state,
     player_input_t p1,
@@ -290,10 +219,6 @@ void game_update_master(
     game_update_common(state, p1, p2_remote);
 }
 
-/*
- * Slave mode:
- * slave applies the official state received from master.
- */
 void game_apply_remote_state(
     game_state_t *state,
     const game_state_t *remote_state
@@ -302,9 +227,6 @@ void game_apply_remote_state(
     *state = *remote_state;
 }
 
-/*
- * Returns 1 if the game is over.
- */
 uint8_t game_is_over(const game_state_t *state)
 {
     return state->status == GAME_OVER;

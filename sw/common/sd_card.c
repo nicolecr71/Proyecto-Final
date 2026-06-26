@@ -95,13 +95,13 @@ sd_result_t sd_card_init(void)
     /* --- Initialize AXI Quad SPI #1 -------------------------------- */
 #ifdef SDT
     XSpi_Config *cfg;
-    cfg = XSpi_LookupConfig((UINTPTR)XPAR_XSPI_1_BASEADDR);
+    cfg = XSpi_LookupConfig((UINTPTR)XPAR_AXI_QUAD_SPI_1_BASEADDR);
     if (cfg == NULL) {
         return SD_INIT_FAIL;
     }
     status = XSpi_CfgInitialize(&sd_spi_inst, cfg, cfg->BaseAddress);
 #else
-    status = XSpi_Initialize(&sd_spi_inst, XPAR_XSPI_1_DEVICE_ID);
+    status = XSpi_Initialize(&sd_spi_inst, XPAR_AXI_QUAD_SPI_1_DEVICE_ID);
 #endif
     if (status != XST_SUCCESS) {
         return SD_INIT_FAIL;

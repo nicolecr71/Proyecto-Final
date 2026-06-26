@@ -50,7 +50,7 @@ static int spi_game_init_hw(void)
 #ifdef SDT
     XSpi_Config *config;
 
-    config = XSpi_LookupConfig((UINTPTR)XPAR_XSPI_0_BASEADDR);
+    config = XSpi_LookupConfig((UINTPTR)XPAR_AXI_QUAD_SPI_0_BASEADDR);
     if (config == NULL) {
         return XST_FAILURE;
     }
@@ -60,7 +60,7 @@ static int spi_game_init_hw(void)
         return status;
     }
 #else
-    status = XSpi_Initialize(&spi_instance, XPAR_XSPI_0_DEVICE_ID);
+    status = XSpi_Initialize(&spi_instance, XPAR_AXI_QUAD_SPI_0_DEVICE_ID);
     if (status != XST_SUCCESS) {
         return status;
     }
