@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="ASCII"?>
+<sdkproject:SdkProject xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:sdkproject="http://www.xilinx.com/sdkproject" name="pong_app_slave" location="/home/geco/Descargas/el3313_proyecto2_compartir_20260625_1633/workspace_new/pong_app_slave" platform="/home/geco/Descargas/el3313_proyecto2_compartir_20260625_1633/workspace_new/el3313_platform/export/el3313_platform/el3313_platform.xpfm" platformUID="xilinx:::0.0(custom)" systemProject="pong_app_slave_system" sysConfig="el3313_platform" runtime="C/C++" cpu="standalone_microblaze_riscv_0" cpuInstance="microblaze_riscv_0" os="standalone" mssSignature="950a6467fbd44a6fba9ad4ed399f4446">
+  <configuration name="Debug" id="xilinx.gnu.riscv.exe.debug.1865501280" dirty="true">
+    <configBuildOptions xsi:type="sdkproject:SdkOptions"/>
+    <lastBuildOptions xsi:type="sdkproject:SdkOptions"/>
+  </configuration>
+  <configuration name="Release" id="xilinx.gnu.riscv.exe.release.89821177" dirty="true">
+    <configBuildOptions xsi:type="sdkproject:SdkOptions"/>
+  </configuration>
+  <template appTemplateName="empty_application"/>
+</sdkproject:SdkProject>
