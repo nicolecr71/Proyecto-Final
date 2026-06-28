@@ -7,8 +7,6 @@ SimulationLib/
 *.log
 *.str
 *.tmp
-*.bit
-*.bin
 *.dcp
 *.rpt
 *.rpx
@@ -25,12 +23,14 @@ SimulationLib/
 *.xpr
 *.os
 
+# NOTA: .bit / .bin / .elf se rastrean a propósito (bitstreams y firmware
+# que queremos versionar). Por eso NO se ignoran globalmente.
+
 # Vitis / Vitis HLS generated files
 .vitis/
 .vitis_hls/
 Debug/
 Release/
-*.elf
 *.map
 *.o
 *.a
@@ -62,3 +62,19 @@ export_hw/
 *.xsa
 *.bak_*
 xsim.dir/
+
+# Comprimidos y entregas empaquetadas (no versionar)
+*.zip
+*.tar.gz
+*.tgz
+entrega_grupo_esclavo_*/
+
+# Estado regenerable del IDE Eclipse/Vitis
+workspace_new/.metadata/
+**/.metadata/
+.analytics
+**/.analytics
+**/_ide/
+
+# Backups locales con timestamp
+**/_backup_*/

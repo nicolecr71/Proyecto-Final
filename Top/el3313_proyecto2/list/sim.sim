@@ -1,0 +1,22 @@
+# Simulation sources
+# Paths must be relative to repository root.
+
+# Top
+sim/tb/tb_el3313_proyecto2_top.v
+sim/tb/tb_video_vram_axi_core.v
+
+# Video
+sim/tb/tb_vga_timing.v
+sim/tb/tb_pixel_tick_gen.v
+sim/tb/tb_pong_static_renderer.v
+
+# Memory / VRAM
+sim/tb/tb_vram_dual_port.v
+sim/tb/tb_vram_read_addr_gen.v
+sim/tb/tb_vram_test_pattern_writer.v
+sim/tb/tb_vram_cpu_write_adapter.v
+
+#AXI
+sim/tb/tb_axi_lite_vram_writer.v
+
+# I/O

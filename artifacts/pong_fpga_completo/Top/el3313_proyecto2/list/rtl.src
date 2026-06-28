@@ -1,0 +1,26 @@
+# RTL sources for pong_system
+# Paths must be relative to repository root.
+
+# Top
+rtl/top/el3313_proyecto2_top.v top=el3313_proyecto2_top
+rtl/top/video_vram_axi_core.v
+
+# Video
+rtl/video/vga_timing.v
+rtl/video/pixel_tick_gen.v
+# rtl/video/vga_controller.v
+rtl/video/pong_static_renderer.v
+
+# Memory / VRAM
+rtl/memory/vram_dual_port.v
+rtl/memory/vram_read_addr_gen.v
+rtl/memory/vram_test_pattern_writer.v
+rtl/memory/vram_cpu_write_adapter.v
+
+# AXI
+rtl/axi/axi_lite_vram_writer.v
+
+# I/O
+# rtl/io/reset_synchronizer.v
+# rtl/io/debouncer.v
+# rtl/io/edge_detector.v
