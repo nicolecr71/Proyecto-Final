@@ -7,6 +7,29 @@
 
 #include "game/sd_card.h"
 
+#ifndef XPAR_AXI_QUAD_SPI_1_BASEADDR
+#ifndef XPAR_AXI_QUAD_SPI_1_DEVICE_ID
+#define SD_CARD_NO_SPI1_FALLBACK 1
+#endif
+#endif
+
+#if SD_CARD_NO_SPI1_FALLBACK
+
+sd_result_t sd_card_init(void)
+{
+    return SD_INIT_FAIL;
+}
+
+sd_result_t sd_card_read_block(uint32_t sector, uint8_t *buf)
+{
+    (void)sector;
+    (void)buf;
+    return SD_INIT_FAIL;
+}
+
+#else
+
+
 /* SD SPI command bytes */
 #define CMD0    0x40U
 #define CMD8    0x48U
@@ -230,3 +253,5 @@ sd_result_t sd_card_read_block(uint32_t sector, uint8_t *buf)
     XSpi_SetSlaveSelect(&sd_spi_inst, 0x00U);
     return SD_OK;
 }
+
+#endif /* SD_CARD_NO_SPI1_FALLBACK */

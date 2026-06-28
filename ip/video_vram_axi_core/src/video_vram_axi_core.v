@@ -50,6 +50,12 @@ module video_vram_axi_core #(
     wire        vram_read_active;
     wire [11:0] vram_read_data;
 
+    /* vram_dual_port tiene 2 ciclos de latencia (BRAM read + MUX register).
+     * Se pipelínea vram_read_active el mismo número de ciclos para alinear
+     * el gate de salida VGA con los datos válidos. */
+    reg         vram_read_active_d1;
+    reg         vram_read_active_d2;
+
     wire        axi_vram_wr_en;
     wire [14:0] axi_vram_wr_addr;
     wire [11:0] axi_vram_wr_data;
@@ -60,6 +66,16 @@ module video_vram_axi_core #(
     reg         swap_pending;
 
     assign reset_active_high = ~S_AXI_ARESETN;
+
+    always @(posedge S_AXI_ACLK) begin
+        if (!S_AXI_ARESETN) begin
+            vram_read_active_d1 <= 1'b0;
+            vram_read_active_d2 <= 1'b0;
+        end else begin
+            vram_read_active_d1 <= vram_read_active;
+            vram_read_active_d2 <= vram_read_active_d1;
+        end
+    end
 
     always @(posedge S_AXI_ACLK) begin
         if (!S_AXI_ARESETN) begin
@@ -163,9 +179,9 @@ module video_vram_axi_core #(
         .rd_data(vram_read_data)
     );
 
-    assign vga_red   = vram_read_active ? vram_read_data[11:8] : 4'h0;
-    assign vga_green = vram_read_active ? vram_read_data[7:4]  : 4'h0;
-    assign vga_blue  = vram_read_active ? vram_read_data[3:0]  : 4'h0;
+    assign vga_red   = vram_read_active_d2 ? vram_read_data[11:8] : 4'h0;
+    assign vga_green = vram_read_active_d2 ? vram_read_data[7:4]  : 4'h0;
+    assign vga_blue  = vram_read_active_d2 ? vram_read_data[3:0]  : 4'h0;
 
 endmodule
 

@@ -177,16 +177,17 @@ SECTIONS
     _end = .;
 
     /* ----------------------------------------------------------------
-     * DDR2 mig_fw (0x80200000+) — application code only
-     * _start (crt0.o) calls main() here via auipc+jalr (long range OK).
-     * MIG is calibrated long before these instructions execute.
+     * BRAM — application code (.text)
+     * The code is small enough (~25 KB) to fit in the 128 KB BRAM.
+     * Running from BRAM avoids the DDR2 fetch latency and keeps the
+     * slave at the same execution speed as the master.
      * ---------------------------------------------------------------- */
     .text : {
-        . = ALIGN(2048);
+        . = ALIGN(4);
         *(EXCLUDE_FILE(*crt0.o) .text)
         *(EXCLUDE_FILE(*crt0.o) .text.*)
         *(.gnu.linkonce.t.*)
-    } > mig_fw
+    } > lmb_bram_0
 
     /* ----------------------------------------------------------------
      * DDR2 mig_0 — custom game-data sections (g_app, etc.)

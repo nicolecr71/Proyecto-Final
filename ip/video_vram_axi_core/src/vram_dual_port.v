@@ -17,23 +17,34 @@ module vram_dual_port #(
     output reg  [DATA_WIDTH-1:0] rd_data
 );
 
-    reg [DATA_WIDTH-1:0] vram_bank0 [0:MEMORY_DEPTH-1];
-    reg [DATA_WIDTH-1:0] vram_bank1 [0:MEMORY_DEPTH-1];
+    (* ram_style = "block" *) reg [DATA_WIDTH-1:0] vram_bank0 [0:MEMORY_DEPTH-1];
+    (* ram_style = "block" *) reg [DATA_WIDTH-1:0] vram_bank1 [0:MEMORY_DEPTH-1];
+
+    reg [DATA_WIDTH-1:0] bank0_rd_data;
+    reg [DATA_WIDTH-1:0] bank1_rd_data;
+    reg                  rd_bank_d;
+
+    /*
+     * Separate always blocks per bank → Vivado infiere 2 Simple Dual Port BRAMs.
+     * Ambos bancos se leen cada ciclo; el MUX final selecciona cuál mostrar.
+     * Esto evita la inferencia de LUTRAM distribuida que violaba timing a 100 MHz.
+     */
+    always @(posedge clk) begin
+        if (wr_en && !wr_bank)
+            vram_bank0[wr_addr] <= wr_data;
+        bank0_rd_data <= vram_bank0[rd_addr];
+    end
 
     always @(posedge clk) begin
-        if (wr_en) begin
-            if (wr_bank) begin
-                vram_bank1[wr_addr] <= wr_data;
-            end else begin
-                vram_bank0[wr_addr] <= wr_data;
-            end
-        end
+        if (wr_en && wr_bank)
+            vram_bank1[wr_addr] <= wr_data;
+        bank1_rd_data <= vram_bank1[rd_addr];
+    end
 
-        if (rd_bank) begin
-            rd_data <= vram_bank1[rd_addr];
-        end else begin
-            rd_data <= vram_bank0[rd_addr];
-        end
+    /* Pipeline de selección: rd_bank_d alinea el banco con los datos leídos. */
+    always @(posedge clk) begin
+        rd_bank_d <= rd_bank;
+        rd_data   <= rd_bank_d ? bank1_rd_data : bank0_rd_data;
     end
 
 endmodule

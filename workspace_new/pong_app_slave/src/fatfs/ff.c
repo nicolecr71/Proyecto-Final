@@ -1,3 +1,11 @@
+/* MicroSD integration note: the Xilinx FatFS source can wrap code in
+ * #if FILE_SYSTEM_INTERFACE_SD. Define it by default so this file also builds
+ * when Vitis/Make does not pass -DFILE_SYSTEM_INTERFACE_SD explicitly.
+ */
+#ifndef FILE_SYSTEM_INTERFACE_SD
+#define FILE_SYSTEM_INTERFACE_SD 1
+#endif
+
 /*----------------------------------------------------------------------------/
 /  FatFs - Generic FAT Filesystem Module  R0.15 w/patch3                      /
 /-----------------------------------------------------------------------------/

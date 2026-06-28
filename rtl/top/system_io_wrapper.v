@@ -36,10 +36,12 @@ module system_io_wrapper (
     output wire [3:0] VGA_R,
     output wire       VGA_VS,
 
-    inout  wire spi_rtl_0_io0_io,
-    inout  wire spi_rtl_0_io1_io,
-    inout  wire spi_rtl_0_sck_io,
-    inout  wire [0:0] spi_rtl_0_ss_io,
+    // Enlace SPI hacia la FPGA master. Esta FPGA es ESCLAVO del bus:
+    // cs/sck/mosi son entradas (las genera el master), miso es salida.
+    input  wire spi_cs_n,
+    input  wire spi_sck,
+    input  wire spi_mosi,
+    output wire spi_miso,
 
     output wire        SD_RESET,
     inout  wire        spi_sd_rtl_0_io0_io,
@@ -124,10 +126,10 @@ module system_io_wrapper (
         .VGA_R(VGA_R),
         .VGA_VS(vga_vs_internal),
 
-        .spi_rtl_0_io0_io(spi_rtl_0_io0_io),
-        .spi_rtl_0_io1_io(spi_rtl_0_io1_io),
-        .spi_rtl_0_sck_io(spi_rtl_0_sck_io),
-        .spi_rtl_0_ss_io(spi_rtl_0_ss_io),
+        .spi_cs_n(spi_cs_n),
+        .spi_sck(spi_sck),
+        .spi_mosi(spi_mosi),
+        .spi_miso(spi_miso),
 
         .spi_sd_rtl_0_io0_io(spi_sd_rtl_0_io0_io),
         .spi_sd_rtl_0_io1_io(spi_sd_rtl_0_io1_io),

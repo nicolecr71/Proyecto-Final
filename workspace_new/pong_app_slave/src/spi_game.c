@@ -2,218 +2,142 @@
 #include <string.h>
 
 #include "xparameters.h"
-#include "xspi.h"
-#include "xstatus.h"
 
 #include "game/spi_game.h"
 #include "game/game_packet.h"
-
-static XSpi spi_instance;
-static uint8_t spi_initialized = 0U;
+#include "game/input_driver.h"
 
 /*
- * Último frame_id recibido del maestro.
- * Se ecoa de vuelta en el paquete de input del jugador 2.
+ * SPI multijugador — lado ESCLAVO (puente de hardware).
+ *
+ * El enlace SPI con la FPGA master lo maneja un esclavo SPI bit-banged en
+ * Verilog (spi_game_slave_reference) envuelto por spi_game_slave_bridge.
+ * Ese hardware está SIEMPRE listo: responde al SCK/CS del master en cada
+ * flanco, sin depender del loop lento del CPU. El CPU solo:
+ *
+ *   - escribe el input del jugador 2 en un AXI GPIO (canal de salida)
+ *   - lee el estado oficial recibido del master desde 3 AXI GPIO (entradas)
+ *
+ * Esto reemplaza al AXI Quad SPI, que estaba mal configurado como master
+ * y nunca podía ser seleccionado/clockeado por la FPGA master.
+ *
+ * Mapa de registros AXI GPIO (offset estándar Xilinx):
+ *   0x00 = canal 1 (GPIO_DATA)
+ *   0x08 = canal 2 (GPIO2_DATA)
+ *
+ *   axi_gpio_spi_a: ch1 <- state_word0,  ch2 <- state_word1   (entradas)
+ *   axi_gpio_spi_b: ch1 <- state_word2,  ch2 <- state_word3   (entradas)
+ *   axi_gpio_spi_c: ch1 <- state_word4,  ch2 -> p2_in_word    (ch1 in / ch2 out)
+ *
+ * Empaquetado (ver spi_game_slave_bridge.v):
+ *   word0 = { ball_x[15:0],      ball_y[15:0]      }
+ *   word1 = { paddle_p1_y[15:0], paddle_p2_y[15:0] }
+ *   word2 = { frame_id[15:0],    elapsed_seconds[15:0] }
+ *   word3 = { score_p1[7:0], score_p2[7:0], status[7:0], winner[7:0] }
+ *   word4 = { last_point[7:0], serve_direction[7:0], flags[7:0], 7'b0, valid_seen }
+ *   p2    = { reset, start, down, up }  (bit3..bit0)
  */
-static uint8_t g_last_frame_id = 0U;
 
-static uint8_t xor_checksum(const uint8_t *buffer, uint32_t length)
-{
-    uint8_t checksum = 0U;
-    uint32_t i;
-
-    for (i = 0U; i < length; i++) {
-        checksum ^= buffer[i];
-    }
-
-    return checksum;
-}
-
-static void put_u16_le(uint8_t *buffer, uint32_t index, uint16_t value)
-{
-    buffer[index]      = (uint8_t)(value & 0x00FFU);
-    buffer[index + 1U] = (uint8_t)((value >> 8U) & 0x00FFU);
-}
-
-static uint16_t get_u16_le(const uint8_t *buffer, uint32_t index)
-{
-    return (uint16_t)(
-        ((uint16_t)buffer[index]) |
-        (((uint16_t)buffer[index + 1U]) << 8U)
-    );
-}
-
-static int spi_slave_init_hw(void)
-{
-    int status;
-
-    if (spi_initialized != 0U) {
-        return XST_SUCCESS;
-    }
-
-#ifdef SDT
-    XSpi_Config *config;
-
-    config = XSpi_LookupConfig((UINTPTR)XPAR_AXI_QUAD_SPI_0_BASEADDR);
-    if (config == NULL) {
-        return XST_FAILURE;
-    }
-
-    status = XSpi_CfgInitialize(&spi_instance, config, config->BaseAddress);
-    if (status != XST_SUCCESS) {
-        return status;
-    }
-#else
-    status = XSpi_Initialize(&spi_instance, XPAR_AXI_QUAD_SPI_0_DEVICE_ID);
-    if (status != XST_SUCCESS) {
-        return status;
-    }
+/*
+ * Direcciones base de los AXI GPIO del puente.
+ * Tras agregar el puente al BD y regenerar el BSP, xparameters.h define
+ * XPAR_AXI_GPIO_SPI_{A,B,C}_BASEADDR. Si tus instancias tienen otro nombre,
+ * defini SPI_BRIDGE_GPIO_{A,B,C}_BASE en los flags del compilador.
+ */
+#ifndef SPI_BRIDGE_GPIO_A_BASE
+#  ifdef XPAR_AXI_GPIO_SPI_A_BASEADDR
+#    define SPI_BRIDGE_GPIO_A_BASE ((uintptr_t)XPAR_AXI_GPIO_SPI_A_BASEADDR)
+#  else
+#    error "Falta XPAR_AXI_GPIO_SPI_A_BASEADDR: regenerar BSP tras agregar el puente, o definir SPI_BRIDGE_GPIO_A_BASE"
+#  endif
+#endif
+#ifndef SPI_BRIDGE_GPIO_B_BASE
+#  ifdef XPAR_AXI_GPIO_SPI_B_BASEADDR
+#    define SPI_BRIDGE_GPIO_B_BASE ((uintptr_t)XPAR_AXI_GPIO_SPI_B_BASEADDR)
+#  else
+#    error "Falta XPAR_AXI_GPIO_SPI_B_BASEADDR: regenerar BSP tras agregar el puente, o definir SPI_BRIDGE_GPIO_B_BASE"
+#  endif
+#endif
+#ifndef SPI_BRIDGE_GPIO_C_BASE
+#  ifdef XPAR_AXI_GPIO_SPI_C_BASEADDR
+#    define SPI_BRIDGE_GPIO_C_BASE ((uintptr_t)XPAR_AXI_GPIO_SPI_C_BASEADDR)
+#  else
+#    error "Falta XPAR_AXI_GPIO_SPI_C_BASEADDR: regenerar BSP tras agregar el puente, o definir SPI_BRIDGE_GPIO_C_BASE"
+#  endif
 #endif
 
-    /*
-     * Modo esclavo SPI:
-     *   - Sin XSP_MASTER_OPTION → la FPGA es esclava (no genera SCK ni CS)
-     *   - Sin XSP_MANUAL_SSELECT_OPTION → no aplica en modo esclavo
-     *   - CPOL=0, CPHA=0 (Modo 0) → coincide con la configuración del maestro
-     */
-    status = XSpi_SetOptions(&spi_instance, 0U);
-    if (status != XST_SUCCESS) {
-        return status;
-    }
+#define GPIO_CH1_DATA_OFFSET 0x00U
+#define GPIO_CH2_DATA_OFFSET 0x08U
 
-    XSpi_Start(&spi_instance);
-    XSpi_IntrGlobalDisable(&spi_instance);
-
-    spi_initialized = 1U;
-    return XST_SUCCESS;
-}
-
-/*
- * Empaca el input del jugador 2 en los primeros 7 bytes del buffer de TX.
- * Los bytes 7..23 se dejan en 0 (padding — el maestro los ignora).
- */
-static void pack_input_wire(
-    uint8_t *buffer,
-    player_input_t input,
-    uint8_t frame_id
-)
+static inline uint32_t gpio_read(uintptr_t base, uint32_t offset)
 {
-    memset(buffer, 0x00, SPI_GAME_FRAME_WIRE_BYTES);
-
-    buffer[0] = GAME_PACKET_TYPE_INPUT;
-    buffer[1] = frame_id;
-    buffer[2] = input.up;
-    buffer[3] = input.down;
-    buffer[4] = input.start;
-    buffer[5] = input.reset;
-    buffer[6] = xor_checksum(buffer, 6U);
-    /* bytes 7..23: ceros, el maestro solo lee bytes 0..6 */
+    return *(volatile uint32_t *)(base + offset);
 }
 
-/*
- * Desempaca el estado del juego recibido desde el maestro (MOSI).
- * El paquete de estado tiene 24 bytes; el checksum está en byte 23.
- */
-static uint8_t unpack_state_wire(
-    const uint8_t *buffer,
-    game_state_t *state
-)
+static inline void gpio_write(uintptr_t base, uint32_t offset, uint32_t value)
 {
-    uint8_t checksum;
-
-    if ((buffer == NULL) || (state == NULL)) {
-        return 0U;
-    }
-
-    if (buffer[0] != GAME_PACKET_TYPE_STATE) {
-        return 0U;
-    }
-
-    checksum = xor_checksum(buffer, 23U);
-    if (checksum != buffer[23]) {
-        return 0U;
-    }
-
-    state->frame_id         = get_u16_le(buffer, 1U);
-    state->ball_x           = get_u16_le(buffer, 3U);
-    state->ball_y           = get_u16_le(buffer, 5U);
-    state->paddle_p1_y      = get_u16_le(buffer, 7U);
-    state->paddle_p2_y      = get_u16_le(buffer, 9U);
-    state->score_p1         = buffer[11];
-    state->score_p2         = buffer[12];
-    state->status           = (game_status_t)buffer[13];
-    state->winner           = buffer[14];
-    state->last_point       = buffer[15];
-    state->elapsed_seconds  = get_u16_le(buffer, 16U);
-    state->serve_direction  = (int8_t)buffer[18];
-    state->flags            = buffer[19];
-
-    return 1U;
+    *(volatile uint32_t *)(base + offset) = value;
 }
 
-/* ------------------------------------------------------------------ */
-
-void spi_game_stub_clear(void)
-{
-    spi_initialized = 0U;
-}
-
-/*
- * Función principal del modo esclavo.
- *
- * Protocolo (24 bytes full-duplex, Mode 0):
- *   MOSI (maestro → esclavo): estado oficial del juego (24 bytes)
- *   MISO (esclavo → maestro): input del jugador 2 (bytes 0..6) + padding
- *
- * Flujo:
- *   1. Se empaca el input de p2 en tx_buffer[0..6], resto = 0.
- *   2. XSpi_Transfer pre-carga el TX FIFO y bloquea hasta que el maestro
- *      inicia la transacción (el maestro es quien genera SCK y CS).
- *   3. Al completar, rx_buffer contiene el estado recibido del maestro.
- *   4. Se desempaca y valida el estado con checksum.
- *
- * Retorna 1 si el estado recibido es válido, 0 si hubo error.
- */
 uint8_t spi_game_slave_exchange_input_state(
     player_input_t p2,
     game_state_t *received_state
 )
 {
-    uint8_t tx_buffer[SPI_GAME_FRAME_WIRE_BYTES];
-    uint8_t rx_buffer[SPI_GAME_FRAME_WIRE_BYTES];
-    int status;
-    uint8_t result;
+    uint32_t word0, word1, word2, word3, word4;
+    uint32_t p2_word;
+    uint8_t  valid_seen;
 
     if (received_state == NULL) {
         return 0U;
     }
 
-    status = spi_slave_init_hw();
-    if (status != XST_SUCCESS) {
+    /*
+     * 1. Publicar el input de p2 hacia el hardware (canal de salida).
+     *    El esclavo SPI lo muestrea al inicio de cada transacción del master.
+     */
+    p2_word = ((uint32_t)(p2.up    ? 1U : 0U) << 0) |
+              ((uint32_t)(p2.down  ? 1U : 0U) << 1) |
+              ((uint32_t)(p2.start ? 1U : 0U) << 2) |
+              ((uint32_t)(p2.reset ? 1U : 0U) << 3);
+    gpio_write(SPI_BRIDGE_GPIO_C_BASE, GPIO_CH2_DATA_OFFSET, p2_word);
+
+    /*
+     * 2. Leer el estado oficial latcheado por el hardware.
+     *    Estos registros solo cambian ante un paquete válido del master,
+     *    así que reflejan el último estado bueno recibido.
+     */
+    word0 = gpio_read(SPI_BRIDGE_GPIO_A_BASE, GPIO_CH1_DATA_OFFSET);
+    word1 = gpio_read(SPI_BRIDGE_GPIO_A_BASE, GPIO_CH2_DATA_OFFSET);
+    word2 = gpio_read(SPI_BRIDGE_GPIO_B_BASE, GPIO_CH1_DATA_OFFSET);
+    word3 = gpio_read(SPI_BRIDGE_GPIO_B_BASE, GPIO_CH2_DATA_OFFSET);
+    word4 = gpio_read(SPI_BRIDGE_GPIO_C_BASE, GPIO_CH1_DATA_OFFSET);
+
+    valid_seen = (uint8_t)(word4 & 0x1U);
+    if (valid_seen == 0U) {
+        /* El enlace aún no ha recibido ningún paquete válido del master. */
         return 0U;
     }
 
-    pack_input_wire(tx_buffer, p2, g_last_frame_id);
-    memset(rx_buffer, 0x00, sizeof(rx_buffer));
+    received_state->ball_x          = (uint16_t)((word0 >> 16) & 0xFFFFU);
+    received_state->ball_y          = (uint16_t)(word0 & 0xFFFFU);
+    received_state->paddle_p1_y     = (uint16_t)((word1 >> 16) & 0xFFFFU);
+    received_state->paddle_p2_y     = (uint16_t)(word1 & 0xFFFFU);
+    received_state->frame_id        = (uint16_t)((word2 >> 16) & 0xFFFFU);
+    received_state->elapsed_seconds = (uint16_t)(word2 & 0xFFFFU);
+    received_state->score_p1        = (uint8_t)((word3 >> 24) & 0xFFU);
+    received_state->score_p2        = (uint8_t)((word3 >> 16) & 0xFFU);
+    received_state->status          = (game_status_t)((word3 >> 8) & 0xFFU);
+    received_state->winner          = (uint8_t)(word3 & 0xFFU);
+    received_state->last_point      = (uint8_t)((word4 >> 24) & 0xFFU);
+    received_state->serve_direction = (int8_t)((word4 >> 16) & 0xFFU);
+    received_state->flags           = (uint8_t)((word4 >> 8) & 0xFFU);
 
-    status = XSpi_Transfer(
-        &spi_instance,
-        tx_buffer,
-        rx_buffer,
-        SPI_GAME_FRAME_WIRE_BYTES
-    );
+    return 1U;
+}
 
-    if (status != XST_SUCCESS) {
-        return 0U;
-    }
-
-    result = unpack_state_wire(rx_buffer, received_state);
-
-    if (result != 0U) {
-        g_last_frame_id = (uint8_t)(received_state->frame_id & 0x00FFU);
-    }
-
-    return result;
+void spi_game_stub_clear(void)
+{
 }
 
 /* ---- Stubs de funciones del maestro — no usadas en modo esclavo ---- */

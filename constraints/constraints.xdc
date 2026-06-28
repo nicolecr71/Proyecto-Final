@@ -94,13 +94,13 @@ set_property -dict { PACKAGE_PIN P18   IOSTANDARD LVCMOS33 } [get_ports { BTND }
 
 ##Pmod Header JA
 
-# SPI maestro hacia la FPGA esclava. Se usa el orden físico estándar de Pmod SPI:
+# Enlace SPI hacia la FPGA master. Esta FPGA es ESCLAVO del bus:
+# cs/sck/mosi son ENTRADAS (las genera el master), miso es SALIDA.
 # JA1 = SS/CS, JA2 = MOSI, JA3 = MISO, JA4 = SCLK.
-# En AXI Quad SPI: io0 = MOSI, io1 = MISO.
-set_property -dict { PACKAGE_PIN C17   IOSTANDARD LVCMOS33 } [get_ports { spi_rtl_0_ss_io[0] }]; #IO_L20N_T3_A19_15 Sch=ja[1] SPI_SS_N
-set_property -dict { PACKAGE_PIN D18   IOSTANDARD LVCMOS33 } [get_ports { spi_rtl_0_io0_io }];  #IO_L21N_T3_DQS_A18_15 Sch=ja[2] SPI_MOSI
-set_property -dict { PACKAGE_PIN E18   IOSTANDARD LVCMOS33 } [get_ports { spi_rtl_0_io1_io }];  #IO_L21P_T3_DQS_15 Sch=ja[3] SPI_MISO
-set_property -dict { PACKAGE_PIN G17   IOSTANDARD LVCMOS33 } [get_ports { spi_rtl_0_sck_io }];  #IO_L18N_T2_A23_15 Sch=ja[4] SPI_SCLK
+set_property -dict { PACKAGE_PIN C17   IOSTANDARD LVCMOS33 } [get_ports { spi_cs_n }]; #IO_L20N_T3_A19_15 Sch=ja[1] SPI_SS_N
+set_property -dict { PACKAGE_PIN D18   IOSTANDARD LVCMOS33 } [get_ports { spi_mosi }]; #IO_L21N_T3_DQS_A18_15 Sch=ja[2] SPI_MOSI
+set_property -dict { PACKAGE_PIN E18   IOSTANDARD LVCMOS33 } [get_ports { spi_miso }]; #IO_L21P_T3_DQS_15 Sch=ja[3] SPI_MISO
+set_property -dict { PACKAGE_PIN G17   IOSTANDARD LVCMOS33 } [get_ports { spi_sck  }]; #IO_L18N_T2_A23_15 Sch=ja[4] SPI_SCLK
 #set_property -dict { PACKAGE_PIN D17   IOSTANDARD LVCMOS33 } [get_ports { JA[7] }]; #IO_L16N_T2_A27_15 Sch=ja[7]
 #set_property -dict { PACKAGE_PIN E17   IOSTANDARD LVCMOS33 } [get_ports { JA[8] }]; #IO_L16P_T2_A28_15 Sch=ja[8]
 #set_property -dict { PACKAGE_PIN F18   IOSTANDARD LVCMOS33 } [get_ports { JA[9] }]; #IO_L22N_T3_A16_15 Sch=ja[9]

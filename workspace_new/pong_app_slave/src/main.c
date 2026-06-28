@@ -112,7 +112,9 @@ int main(void)
 
             pong_render_state(&g_app.state);
             vram_request_buffer_swap();
-            input_wait_next_frame();
+            /* El SPI del master ya da el timing de frame.
+             * El swap lo sincroniza el hardware en el próximo vsync
+             * del slave, que cae dentro de la espera del siguiente SPI. */
         }
     }
 
