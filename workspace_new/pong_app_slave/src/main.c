@@ -93,12 +93,12 @@ int main(void)
              * SW15 = 1: multijugador SPI, modo esclavo.
              *
              * El maestro (FPGA master) controla el estado oficial del juego.
-             * Esta FPGA lee el joystick del jugador 2 (paleta derecha),
-             * lo envía por MISO y recibe el estado actualizado por MOSI.
+             * Esta FPGA publica el input del jugador 2 hacia el puente SPI
+             * (por MISO) y lee el estado oficial recibido (por MOSI).
              *
-             * spi_game_slave_exchange_input_state() pre-carga el TX FIFO
-             * con el input del jugador 2 y luego bloquea hasta que el
-             * maestro inicia la transacción SPI (24 bytes full-duplex).
+             * El enlace SPI lo maneja el hardware (spi_game_slave_bridge),
+             * así que spi_game_slave_exchange_input_state() solo escribe/lee
+             * registros GPIO y retorna de inmediato — NO bloquea.
              */
             p2 = input_read_player2();
 
@@ -112,9 +112,14 @@ int main(void)
 
             pong_render_state(&g_app.state);
             vram_request_buffer_swap();
-            /* El SPI del master ya da el timing de frame.
-             * El swap lo sincroniza el hardware en el próximo vsync
-             * del slave, que cae dentro de la espera del siguiente SPI. */
+
+            /*
+             * Pacing por vsync: como el puente ya no bloquea, hay que esperar
+             * el siguiente frame del VGA antes de renderizar/swappear de nuevo.
+             * Sin esto el loop gira libre y dispara swaps de doble buffer mucho
+             * más rápido que 60 Hz -> tearing/parpadeo en la pantalla del slave.
+             */
+            input_wait_next_frame();
         }
     }
 
