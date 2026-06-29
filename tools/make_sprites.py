@@ -33,8 +33,8 @@ TOTAL_BYTES        = 0x0118
 # Colores por defecto RGB444 (0x0RGB)
 # Editalos para personalizar la apariencia del juego
 COLOR_BALL     = 0x0FFF  # blanco
-COLOR_P1       = 0x00FF  # cyan
-COLOR_P2       = 0x0FA0  # naranja
+COLOR_P1       = 0x0FFF  # blanco
+COLOR_P2       = 0x0FFF  # blanco
 
 
 def rgb444(r, g, b):
