@@ -1,37 +1,80 @@
-# Vivado / HoG generated files
+# Vivado / Xilinx generated files
 Projects/
 bin/
 SimulationLib/
 .Xil/
 *.jou
 *.log
-*.bit
-*.bin
+*.str
+*.tmp
 *.dcp
 *.rpt
 *.rpx
-*.str
 *.wdb
+*.wcfg
 *.pb
-*.xpr
-
-# Vivado runs/cache
-*.runs/
 *.cache/
+*.runs/
 *.hw/
-*.sim/
 *.ip_user_files/
+*.sim/
+*.srcs/
+*.gen/
+*.xpr
+*.os
 
-# Vitis generated files
-workspace/
+# NOTA: .bit / .bin / .elf se rastrean a propósito (bitstreams y firmware
+# que queremos versionar). Por eso NO se ignoran globalmente.
+
+# Vitis / Vitis HLS generated files
 .vitis/
+.vitis_hls/
 Debug/
 Release/
-*.elf
 *.map
 *.o
+*.a
+*.lo
+*.la
+firmware/workspace/
 
-# OS/editor
+# Waveforms and simulation outputs
+*.vcd
+*.fst
+*.ghw
+sim/output/
+sim/work/
+
+# Claude Code internal
+.claude/
+
+# Editor / OS files
 .DS_Store
+Thumbs.db
 *.swp
-.vscode/
+*.swo
+*~
+
+# VSCode local workspace state
+.vscode/*.log
+workspace/
+export_hw/
+*.xsa
+*.bak_*
+xsim.dir/
+
+# Comprimidos y entregas empaquetadas (no versionar)
+*.zip
+*.tar.gz
+*.tgz
+entrega_grupo_esclavo_*/
+
+# Estado regenerable del IDE Eclipse/Vitis
+workspace_new/.metadata/
+**/.metadata/
+.analytics
+**/.analytics
+**/_ide/
+
+# Backups locales con timestamp
+**/_backup_*/
