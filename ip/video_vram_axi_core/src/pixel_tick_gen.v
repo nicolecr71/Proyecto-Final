@@ -21,8 +21,6 @@ module pixel_tick_gen #(
 );
 
     reg [7:0] tick_counter;
-
-    //! @brief Contador divisor para generar la habilitación de pixel.
     always @(posedge clk) begin
         if (rst) begin
             tick_counter <= 8'd0;

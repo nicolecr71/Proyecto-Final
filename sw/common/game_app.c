@@ -1,3 +1,8 @@
+/**
+ * @file game_app.c
+ * @brief Capa de aplicacion que selecciona modo local, maestro o esclavo sin modificar las reglas del juego.
+ */
+
 #include "game/game_app.h"
 
 /*

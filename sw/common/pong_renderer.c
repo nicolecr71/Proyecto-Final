@@ -1,3 +1,8 @@
+/**
+ * @file pong_renderer.c
+ * @brief Renderizado del estado del Pong sobre la VRAM mapeada en memoria.
+ */
+
 #include <stdint.h>
 
 #include "game/pong_renderer.h"

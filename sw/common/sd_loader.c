@@ -1,3 +1,8 @@
+/**
+ * @file sd_loader.c
+ * @brief Carga de recursos binarios desde FAT32 hacia regiones definidas de DDR2.
+ */
+
 #include "game/sd_loader.h"
 #include "game/ddr2_memory.h"
 #include "fatfs/ff.h"

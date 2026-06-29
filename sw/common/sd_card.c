@@ -1,3 +1,8 @@
+/**
+ * @file sd_card.c
+ * @brief Inicializacion y lectura basica de bloques desde microSD en modo SPI.
+ */
+
 #include <stdint.h>
 #include <string.h>
 

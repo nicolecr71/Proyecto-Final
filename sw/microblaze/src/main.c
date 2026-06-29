@@ -1,3 +1,8 @@
+/**
+ * @file main.c
+ * @brief Punto de entrada bare-metal para inicializar recursos y ejecutar el lazo principal del Pong.
+ */
+
 #include <stdint.h>
 
 #include "game/game_app.h"

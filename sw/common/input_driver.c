@@ -1,3 +1,8 @@
+/**
+ * @file input_driver.c
+ * @brief Lectura y decodificacion de entradas condicionadas desde AXI GPIO.
+ */
+
 #include <stdint.h>
 
 #include "game/input_driver.h"

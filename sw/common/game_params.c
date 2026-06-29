@@ -1,3 +1,8 @@
+/**
+ * @file game_params.c
+ * @brief Carga parametros de juego desde la configuracion almacenada en DDR2.
+ */
+
 #include "game/game_params.h"
 #include "game/game_config.h"
 #include "game/ddr2_memory.h"

@@ -44,8 +44,6 @@ module el3313_proyecto2_top (
     reg pattern_start;
 
     assign reset_active_high = ~CPU_RESETN;
-
-    //! @brief Pulso inicial para llenar la VRAM después del reset.
     always @(posedge CLK100MHZ) begin
         if (reset_active_high) begin
             pattern_start <= 1'b0;

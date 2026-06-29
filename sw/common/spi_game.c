@@ -1,3 +1,8 @@
+/**
+ * @file spi_game.c
+ * @brief Transaccion SPI de juego para intercambiar estado oficial y entrada remota.
+ */
+
 #include <stdint.h>
 #include <string.h>
 

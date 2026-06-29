@@ -64,8 +64,6 @@ module pong_static_renderer #(
         (pixel_x <  BALL_X + BALL_SIZE) &&
         (pixel_y >= BALL_Y) &&
         (pixel_y <  BALL_Y + BALL_SIZE);
-
-    //! @brief Lógica combinacional de color para la escena estática.
     always @(*) begin
         vga_red   = 4'h0;
         vga_green = 4'h0;

@@ -1,5 +1,9 @@
 `default_nettype none
 
+//! @title Escritor AXI4-Lite hacia VRAM
+//! @author Grupo Pong EL3313
+//! @brief Recibe escrituras AXI4-Lite desde MicroBlaze y las convierte en escrituras lineales hacia la VRAM. Tambien expone un registro de control para solicitar el intercambio de buffers de video.
+
 module axi_lite_vram_writer #(
     parameter C_S_AXI_DATA_WIDTH = 32,
     parameter C_S_AXI_ADDR_WIDTH = 17,
@@ -7,38 +11,38 @@ module axi_lite_vram_writer #(
     parameter VRAM_DATA_WIDTH    = 12,
     parameter VRAM_MEMORY_DEPTH  = 19200
 )(
-    input  wire                                  S_AXI_ACLK,
-    input  wire                                  S_AXI_ARESETN,
+    input  wire                                  S_AXI_ACLK, //! Reloj de la interfaz AXI4-Lite.
+    input  wire                                  S_AXI_ARESETN, //! Reset AXI activo en bajo.
 
-    input  wire [C_S_AXI_ADDR_WIDTH-1:0]         S_AXI_AWADDR,
-    input  wire [2:0]                            S_AXI_AWPROT,
-    input  wire                                  S_AXI_AWVALID,
-    output reg                                   S_AXI_AWREADY,
+    input  wire [C_S_AXI_ADDR_WIDTH-1:0]         S_AXI_AWADDR, //! Canal de direccion de escritura AXI4-Lite.
+    input  wire [2:0]                            S_AXI_AWPROT, //! Canal de direccion de escritura AXI4-Lite.
+    input  wire                                  S_AXI_AWVALID, //! Canal de direccion de escritura AXI4-Lite.
+    output reg                                   S_AXI_AWREADY, //! Canal de direccion de escritura AXI4-Lite.
 
-    input  wire [C_S_AXI_DATA_WIDTH-1:0]         S_AXI_WDATA,
-    input  wire [(C_S_AXI_DATA_WIDTH/8)-1:0]     S_AXI_WSTRB,
-    input  wire                                  S_AXI_WVALID,
-    output reg                                   S_AXI_WREADY,
+    input  wire [C_S_AXI_DATA_WIDTH-1:0]         S_AXI_WDATA, //! Canal de datos de escritura AXI4-Lite.
+    input  wire [(C_S_AXI_DATA_WIDTH/8)-1:0]     S_AXI_WSTRB, //! Canal de datos de escritura AXI4-Lite.
+    input  wire                                  S_AXI_WVALID, //! Canal de datos de escritura AXI4-Lite.
+    output reg                                   S_AXI_WREADY, //! Canal de datos de escritura AXI4-Lite.
 
-    output reg  [1:0]                            S_AXI_BRESP,
-    output reg                                   S_AXI_BVALID,
-    input  wire                                  S_AXI_BREADY,
+    output reg  [1:0]                            S_AXI_BRESP, //! Canal de respuesta de escritura AXI4-Lite.
+    output reg                                   S_AXI_BVALID, //! Canal de respuesta de escritura AXI4-Lite.
+    input  wire                                  S_AXI_BREADY, //! Canal de respuesta de escritura AXI4-Lite.
 
-    input  wire [C_S_AXI_ADDR_WIDTH-1:0]         S_AXI_ARADDR,
-    input  wire [2:0]                            S_AXI_ARPROT,
-    input  wire                                  S_AXI_ARVALID,
-    output reg                                   S_AXI_ARREADY,
+    input  wire [C_S_AXI_ADDR_WIDTH-1:0]         S_AXI_ARADDR, //! Canal de direccion de lectura AXI4-Lite.
+    input  wire [2:0]                            S_AXI_ARPROT, //! Canal de direccion de lectura AXI4-Lite.
+    input  wire                                  S_AXI_ARVALID, //! Canal de direccion de lectura AXI4-Lite.
+    output reg                                   S_AXI_ARREADY, //! Canal de direccion de lectura AXI4-Lite.
 
-    output reg  [C_S_AXI_DATA_WIDTH-1:0]         S_AXI_RDATA,
-    output reg  [1:0]                            S_AXI_RRESP,
-    output reg                                   S_AXI_RVALID,
-    input  wire                                  S_AXI_RREADY,
+    output reg  [C_S_AXI_DATA_WIDTH-1:0]         S_AXI_RDATA, //! Canal de datos de lectura AXI4-Lite.
+    output reg  [1:0]                            S_AXI_RRESP, //! Canal de datos de lectura AXI4-Lite.
+    output reg                                   S_AXI_RVALID, //! Canal de datos de lectura AXI4-Lite.
+    input  wire                                  S_AXI_RREADY, //! Canal de datos de lectura AXI4-Lite.
 
-    output reg                                   swap_request,
+    output reg                                   swap_request, //! Solicitud de intercambio de buffer de video.
 
-    output reg                                   vram_wr_en,
-    output reg  [VRAM_ADDR_WIDTH-1:0]            vram_wr_addr,
-    output reg  [VRAM_DATA_WIDTH-1:0]            vram_wr_data
+    output reg                                   vram_wr_en, //! Habilitacion de escritura hacia VRAM.
+    output reg  [VRAM_ADDR_WIDTH-1:0]            vram_wr_addr, //! Direccion lineal de escritura en VRAM.
+    output reg  [VRAM_DATA_WIDTH-1:0]            vram_wr_data //! Dato RGB444 hacia VRAM.
 );
 
     localparam [1:0] AXI_RESP_OKAY   = 2'b00;

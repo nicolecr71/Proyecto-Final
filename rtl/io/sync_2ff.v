@@ -1,10 +1,14 @@
 `timescale 1ns / 1ps
 
+//! @title Sincronizador de dos flip-flops
+//! @author Grupo Pong EL3313
+//! @brief Sincroniza una senal asincrona al dominio de reloj principal para reducir riesgos de metastabilidad.
+
 module sync_2ff (
-    input  wire clk,
-    input  wire rst_n,
-    input  wire async_i,
-    output wire sync_o
+    input  wire clk, //! Reloj del modulo.
+    input  wire rst_n, //! Reset activo en bajo.
+    input  wire async_i, //! Entrada asincrona respecto al reloj local.
+    output wire sync_o //! Salida sincronizada al reloj local.
 );
 
     reg sync_ff1;

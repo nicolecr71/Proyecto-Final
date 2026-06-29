@@ -37,8 +37,6 @@ module vram_read_addr_gen (
 
     // logical_y * 160 = logical_y * 128 + logical_y * 32
     assign row_base = {logical_y, 7'b0000000} + {logical_y, 5'b00000};
-
-    //! @brief Lógica combinacional para generar dirección de lectura.
     always @(*) begin
         vram_read_addr   = 15'd0;
         vram_read_active = 1'b0;

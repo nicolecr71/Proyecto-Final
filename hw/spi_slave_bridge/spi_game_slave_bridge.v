@@ -1,5 +1,9 @@
 `timescale 1ns / 1ps
 
+//! @title Puente SPI para FPGA esclava
+//! @author Grupo Pong EL3313
+//! @brief Adapta el enlace SPI entre FPGAs para recibir el estado oficial del juego y exponerlo al sistema de video/control.
+
 /*
  * spi_game_slave_bridge
  *
@@ -32,14 +36,14 @@
  */
 
 module spi_game_slave_bridge (
-    input  wire        clk,
-    input  wire        rst_n,
+    input  wire        clk, //! Reloj del modulo.
+    input  wire        rst_n, //! Reset activo en bajo.
 
     /* Pines SPI físicos (al top-level / Pmod JA). Esta FPGA es ESCLAVO. */
-    input  wire        spi_cs_n,
-    input  wire        spi_sck,
-    input  wire        spi_mosi,
-    output wire        spi_miso,
+    input  wire        spi_cs_n, //! Chip select activo en bajo del enlace SPI entre FPGAs.
+    input  wire        spi_sck, //! Reloj SPI recibido desde la FPGA maestra.
+    input  wire        spi_mosi, //! Datos SPI de maestra hacia esclava.
+    output wire        spi_miso, //! Datos SPI de esclava hacia maestra.
 
     /* Input del jugador 2 escrito por el CPU (AXI GPIO output channel). */
     input  wire [31:0] p2_in_word,

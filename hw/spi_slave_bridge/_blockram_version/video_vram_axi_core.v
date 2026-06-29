@@ -1,41 +1,45 @@
 `default_nettype none
 
+//! @title Nucleo de video con VRAM AXI
+//! @author Grupo Pong EL3313
+//! @brief Version BRAM del nucleo de video que integra AXI4-Lite, VRAM de doble banco y salida VGA.
+
 module video_vram_axi_core #(
     parameter C_S_AXI_DATA_WIDTH = 32,
     parameter C_S_AXI_ADDR_WIDTH = 17
 )(
-    input  wire                                  S_AXI_ACLK,
-    input  wire                                  S_AXI_ARESETN,
+    input  wire                                  S_AXI_ACLK, //! Reloj de la interfaz AXI4-Lite.
+    input  wire                                  S_AXI_ARESETN, //! Reset AXI activo en bajo.
 
-    input  wire [C_S_AXI_ADDR_WIDTH-1:0]         S_AXI_AWADDR,
-    input  wire [2:0]                            S_AXI_AWPROT,
-    input  wire                                  S_AXI_AWVALID,
-    output wire                                  S_AXI_AWREADY,
+    input  wire [C_S_AXI_ADDR_WIDTH-1:0]         S_AXI_AWADDR, //! Canal de direccion de escritura AXI4-Lite.
+    input  wire [2:0]                            S_AXI_AWPROT, //! Canal de direccion de escritura AXI4-Lite.
+    input  wire                                  S_AXI_AWVALID, //! Canal de direccion de escritura AXI4-Lite.
+    output wire                                  S_AXI_AWREADY, //! Canal de direccion de escritura AXI4-Lite.
 
-    input  wire [C_S_AXI_DATA_WIDTH-1:0]         S_AXI_WDATA,
-    input  wire [(C_S_AXI_DATA_WIDTH/8)-1:0]     S_AXI_WSTRB,
-    input  wire                                  S_AXI_WVALID,
-    output wire                                  S_AXI_WREADY,
+    input  wire [C_S_AXI_DATA_WIDTH-1:0]         S_AXI_WDATA, //! Canal de datos de escritura AXI4-Lite.
+    input  wire [(C_S_AXI_DATA_WIDTH/8)-1:0]     S_AXI_WSTRB, //! Canal de datos de escritura AXI4-Lite.
+    input  wire                                  S_AXI_WVALID, //! Canal de datos de escritura AXI4-Lite.
+    output wire                                  S_AXI_WREADY, //! Canal de datos de escritura AXI4-Lite.
 
-    output wire [1:0]                            S_AXI_BRESP,
-    output wire                                  S_AXI_BVALID,
-    input  wire                                  S_AXI_BREADY,
+    output wire [1:0]                            S_AXI_BRESP, //! Canal de respuesta de escritura AXI4-Lite.
+    output wire                                  S_AXI_BVALID, //! Canal de respuesta de escritura AXI4-Lite.
+    input  wire                                  S_AXI_BREADY, //! Canal de respuesta de escritura AXI4-Lite.
 
-    input  wire [C_S_AXI_ADDR_WIDTH-1:0]         S_AXI_ARADDR,
-    input  wire [2:0]                            S_AXI_ARPROT,
-    input  wire                                  S_AXI_ARVALID,
-    output wire                                  S_AXI_ARREADY,
+    input  wire [C_S_AXI_ADDR_WIDTH-1:0]         S_AXI_ARADDR, //! Canal de direccion de lectura AXI4-Lite.
+    input  wire [2:0]                            S_AXI_ARPROT, //! Canal de direccion de lectura AXI4-Lite.
+    input  wire                                  S_AXI_ARVALID, //! Canal de direccion de lectura AXI4-Lite.
+    output wire                                  S_AXI_ARREADY, //! Canal de direccion de lectura AXI4-Lite.
 
-    output wire [C_S_AXI_DATA_WIDTH-1:0]         S_AXI_RDATA,
-    output wire [1:0]                            S_AXI_RRESP,
-    output wire                                  S_AXI_RVALID,
-    input  wire                                  S_AXI_RREADY,
+    output wire [C_S_AXI_DATA_WIDTH-1:0]         S_AXI_RDATA, //! Canal de datos de lectura AXI4-Lite.
+    output wire [1:0]                            S_AXI_RRESP, //! Canal de datos de lectura AXI4-Lite.
+    output wire                                  S_AXI_RVALID, //! Canal de datos de lectura AXI4-Lite.
+    input  wire                                  S_AXI_RREADY, //! Canal de datos de lectura AXI4-Lite.
 
-    output wire [3:0]                            vga_red,
-    output wire [3:0]                            vga_green,
-    output wire [3:0]                            vga_blue,
-    output wire                                  vga_hsync,
-    output wire                                  vga_vsync
+    output wire [3:0]                            vga_red, //! Canal rojo VGA generado por el nucleo de video.
+    output wire [3:0]                            vga_green, //! Canal verde VGA generado por el nucleo de video.
+    output wire [3:0]                            vga_blue, //! Canal azul VGA generado por el nucleo de video.
+    output wire                                  vga_hsync, //! Sincronizacion horizontal VGA.
+    output wire                                  vga_vsync //! Sincronizacion vertical VGA.
 );
 
     wire reset_active_high;

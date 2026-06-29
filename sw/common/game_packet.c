@@ -1,3 +1,8 @@
+/**
+ * @file game_packet.c
+ * @brief Construccion y validacion de paquetes logicos usados por el enlace SPI del juego.
+ */
+
 #include "game/game_packet.h"
 
 /*

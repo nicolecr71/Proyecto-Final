@@ -1,18 +1,22 @@
 `timescale 1ns / 1ps
 
+//! @title Acondicionador de entradas
+//! @author Grupo Pong EL3313
+//! @brief Sincroniza y filtra los botones/switches de la Nexys A7 antes de entregarlos al AXI GPIO como bus INPUT_DRIVER[7:0].
+
 module input_conditioner (
-    input  wire clk,
-    input  wire rst_n,
+    input  wire clk, //! Reloj del modulo.
+    input  wire rst_n, //! Reset activo en bajo.
 
-    input  wire btn_start_raw,
-    input  wire btn_left_up_raw,
-    input  wire btn_left_down_raw,
-    input  wire btn_right_up_raw,
-    input  wire btn_right_down_raw,
-    input  wire sw_multiplayer_raw,
-    input  wire sw_game_reset_raw,
+    input  wire btn_start_raw, //! Boton START antes de sincronizacion/antirrebote.
+    input  wire btn_left_up_raw, //! Entrada cruda para subir paleta izquierda.
+    input  wire btn_left_down_raw, //! Entrada cruda para bajar paleta izquierda.
+    input  wire btn_right_up_raw, //! Entrada cruda para subir paleta derecha.
+    input  wire btn_right_down_raw, //! Entrada cruda para bajar paleta derecha.
+    input  wire sw_multiplayer_raw, //! Switch crudo de seleccion multijugador.
+    input  wire sw_game_reset_raw, //! Switch crudo de reinicio de juego.
 
-    output wire [7:0] input_driver_o
+    output wire [7:0] input_driver_o //! Bus de entradas ya acondicionado para AXI GPIO.
 );
 
     wire start_sync;

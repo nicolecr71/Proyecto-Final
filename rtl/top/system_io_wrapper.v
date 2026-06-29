@@ -1,53 +1,57 @@
 `timescale 1ns / 1ps
 
+//! @title Wrapper de entradas/salidas del sistema
+//! @author Grupo Pong EL3313
+//! @brief Conecta los pines fisicos de Nexys A7 con el bloque de sistema: entradas condicionadas, DDR2, UART, VGA, SPI entre FPGAs y microSD.
+
 module system_io_wrapper (
-    input  wire CLK100MHZ,
-    input  wire CPU_RESETN,
+    input  wire CLK100MHZ, //! Reloj principal de 100 MHz de la Nexys A7.
+    input  wire CPU_RESETN, //! Reset fisico activo en bajo.
 
-    input  wire BTNC,
-    input  wire BTNU,
-    input  wire BTNL,
-    input  wire BTNR,
-    input  wire BTND,
-    input  wire SW15,
-    input  wire SW0,
+    input  wire BTNC, //! Boton central usado como inicio de partida.
+    input  wire BTNU, //! Boton superior para mover la paleta izquierda.
+    input  wire BTNL, //! Boton izquierdo para mover la paleta izquierda.
+    input  wire BTNR, //! Boton derecho para mover la paleta derecha.
+    input  wire BTND, //! Boton inferior para mover la paleta derecha.
+    input  wire SW15, //! Switch para habilitar el modo multijugador por SPI.
+    input  wire SW0, //! Switch usado como reinicio de partida.
 
-    output wire [12:0] DDR2_0_addr,
-    output wire [2:0]  DDR2_0_ba,
-    output wire        DDR2_0_cas_n,
-    output wire [0:0]  DDR2_0_ck_n,
-    output wire [0:0]  DDR2_0_ck_p,
-    output wire [0:0]  DDR2_0_cke,
-    output wire [0:0]  DDR2_0_cs_n,
-    output wire [1:0]  DDR2_0_dm,
-    inout  wire [15:0] DDR2_0_dq,
-    inout  wire [1:0]  DDR2_0_dqs_n,
-    inout  wire [1:0]  DDR2_0_dqs_p,
-    output wire [0:0]  DDR2_0_odt,
-    output wire        DDR2_0_ras_n,
-    output wire        DDR2_0_we_n,
+    output wire [12:0] DDR2_0_addr, //! Senal fisica de la interfaz DDR2 de la Nexys A7.
+    output wire [2:0]  DDR2_0_ba, //! Senal fisica de la interfaz DDR2 de la Nexys A7.
+    output wire        DDR2_0_cas_n, //! Senal fisica de la interfaz DDR2 de la Nexys A7.
+    output wire [0:0]  DDR2_0_ck_n, //! Senal fisica de la interfaz DDR2 de la Nexys A7.
+    output wire [0:0]  DDR2_0_ck_p, //! Senal fisica de la interfaz DDR2 de la Nexys A7.
+    output wire [0:0]  DDR2_0_cke, //! Senal fisica de la interfaz DDR2 de la Nexys A7.
+    output wire [0:0]  DDR2_0_cs_n, //! Senal fisica de la interfaz DDR2 de la Nexys A7.
+    output wire [1:0]  DDR2_0_dm, //! Senal fisica de la interfaz DDR2 de la Nexys A7.
+    inout  wire [15:0] DDR2_0_dq, //! Senal fisica de la interfaz DDR2 de la Nexys A7.
+    inout  wire [1:0]  DDR2_0_dqs_n, //! Senal fisica de la interfaz DDR2 de la Nexys A7.
+    inout  wire [1:0]  DDR2_0_dqs_p, //! Senal fisica de la interfaz DDR2 de la Nexys A7.
+    output wire [0:0]  DDR2_0_odt, //! Senal fisica de la interfaz DDR2 de la Nexys A7.
+    output wire        DDR2_0_ras_n, //! Senal fisica de la interfaz DDR2 de la Nexys A7.
+    output wire        DDR2_0_we_n, //! Senal fisica de la interfaz DDR2 de la Nexys A7.
 
-    input  wire UART_0_rxd,
-    output wire UART_0_txd,
+    input  wire UART_0_rxd, //! Entrada UART para depuracion desde el computador.
+    output wire UART_0_txd, //! Salida UART para mensajes de depuracion.
 
-    output wire [3:0] VGA_B,
-    output wire [3:0] VGA_G,
-    output wire       VGA_HS,
-    output wire [3:0] VGA_R,
-    output wire       VGA_VS,
+    output wire [3:0] VGA_B, //! Canal azul de la salida VGA.
+    output wire [3:0] VGA_G, //! Canal verde de la salida VGA.
+    output wire       VGA_HS, //! Sincronizacion horizontal VGA.
+    output wire [3:0] VGA_R, //! Canal rojo de la salida VGA.
+    output wire       VGA_VS, //! Sincronizacion vertical VGA.
 
     // Enlace SPI hacia la FPGA master. Esta FPGA es ESCLAVO del bus:
     // cs/sck/mosi son entradas (las genera el master), miso es salida.
-    input  wire spi_cs_n,
-    input  wire spi_sck,
-    input  wire spi_mosi,
-    output wire spi_miso,
+    input  wire spi_cs_n, //! Chip select activo en bajo del enlace SPI entre FPGAs.
+    input  wire spi_sck, //! Reloj SPI recibido desde la FPGA maestra.
+    input  wire spi_mosi, //! Datos SPI de maestra hacia esclava.
+    output wire spi_miso, //! Datos SPI de esclava hacia maestra.
 
-    output wire        SD_RESET,
-    inout  wire        spi_sd_rtl_0_io0_io,
-    inout  wire        spi_sd_rtl_0_io1_io,
-    inout  wire        spi_sd_rtl_0_sck_io,
-    inout  wire [0:0]  spi_sd_rtl_0_ss_io
+    output wire        SD_RESET, //! Reset de la interfaz microSD.
+    inout  wire        spi_sd_rtl_0_io0_io, //! Linea de datos IO0 de la microSD.
+    inout  wire        spi_sd_rtl_0_io1_io, //! Linea de datos IO1 de la microSD.
+    inout  wire        spi_sd_rtl_0_sck_io, //! Reloj SPI de la microSD.
+    inout  wire [0:0]  spi_sd_rtl_0_ss_io //! Chip select de la microSD.
 );
 
     wire [7:0] input_driver_conditioned;

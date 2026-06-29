@@ -60,8 +60,6 @@ module vga_timing #(
 
     assign pixel_x = h_count;
     assign pixel_y = v_count;
-
-    //! @brief Contadores horizontal y vertical del barrido VGA.
     always @(posedge clk) begin
         if (rst) begin
             h_count <= 10'd0;
@@ -80,8 +78,6 @@ module vga_timing #(
             end
         end
     end
-
-    //! @brief Generación combinacional registrada de las señales de sincronización.
     always @(posedge clk) begin
         if (rst) begin
             hsync <= 1'b1;

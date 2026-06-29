@@ -81,8 +81,6 @@ module vram_test_pattern_writer #(
         (logical_x <  BALL_X + BALL_SIZE) &&
         (logical_y >= BALL_Y) &&
         (logical_y <  BALL_Y + BALL_SIZE);
-
-    //! @brief Lógica combinacional para seleccionar el color del pixel actual.
     always @(*) begin
         next_pixel_data = COLOR_BLACK;
 
@@ -92,8 +90,6 @@ module vram_test_pattern_writer #(
             next_pixel_data = COLOR_GRAY;
         end
     end
-
-    //! @brief Secuencia de escritura lineal de la VRAM.
     always @(posedge clk) begin
         if (rst) begin
             wr_en      <= 1'b0;

@@ -1,5 +1,9 @@
 `timescale 1ns / 1ps
 
+//! @title Referencia de protocolo SPI esclavo
+//! @author Grupo Pong EL3313
+//! @brief Modelo de referencia del lado esclavo para validar tramas SPI de entrada y estado del juego.
+
 /*
  * SPI Game Slave Reference - Verilog
  *
@@ -20,13 +24,13 @@
  */
 
 module spi_game_slave_reference (
-    input  wire clk,
-    input  wire rst_n,
+    input  wire clk, //! Reloj del modulo.
+    input  wire rst_n, //! Reset activo en bajo.
 
-    input  wire spi_cs_n,
-    input  wire spi_sck,
-    input  wire spi_mosi,
-    output reg  spi_miso,
+    input  wire spi_cs_n, //! Chip select activo en bajo del enlace SPI entre FPGAs.
+    input  wire spi_sck, //! Reloj SPI recibido desde la FPGA maestra.
+    input  wire spi_mosi, //! Datos SPI de maestra hacia esclava.
+    output reg  spi_miso, //! Datos SPI de esclava hacia maestra.
 
     input  wire p2_up_i,
     input  wire p2_down_i,

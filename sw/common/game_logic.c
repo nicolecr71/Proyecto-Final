@@ -1,3 +1,8 @@
+/**
+ * @file game_logic.c
+ * @brief Reglas deterministicas del Pong: entradas, movimiento, colisiones, puntaje y estado de partida.
+ */
+
 #include "game/game_logic.h"
 #include "game/game_config.h"
 #include "game/game_params.h"
