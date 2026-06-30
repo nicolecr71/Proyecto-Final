@@ -60,6 +60,8 @@ Thumbs.db
 workspace/
 export_hw/
 *.xsa
+# Excepción: el .xsa exportado del sistema sí se versiona (necesario para Vitis)
+!/el3313_proyecto2_system_wrapper.xsa
 *.bak_*
 xsim.dir/
 
@@ -78,3 +80,6 @@ workspace_new/.metadata/
 
 # Backups locales con timestamp
 **/_backup_*/
+
+# Copia empaquetada antigua y redundante del proyecto (no versionar)
+artifacts/pong_fpga_completo/
