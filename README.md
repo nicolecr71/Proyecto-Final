@@ -1,215 +1,258 @@
-# EL3313 — Proyecto 2: Pong sobre FPGA (Grupo Maestro)
+# Proyecto Pong FPGA Esclava - Nexys A7-100T
 
-Sistema embebido bare-metal sobre **FPGA Nexys A7-100T** que implementa el juego **Pong**
-con salida VGA, controles físicos y **modo multijugador maestro–esclavo vía SPI** entre dos FPGAs.
+## Descripción del proyecto
 
-> Este README está pensado para que cualquier compañero que reciba el paquete tenga **todo el
-> contexto** para entender, compilar, cargar y continuar el proyecto.
+Este repositorio contiene la parte correspondiente a la **FPGA esclava** del Proyecto 2. El sistema forma parte de un Pong multijugador implementado sobre Nexys A7-100T, usando firmware en C, comunicación SPI, periféricos de entrada, memoria local y una estructura modular compatible con la FPGA maestra.
 
----
+La FPGA esclava se encarga de leer los controles del jugador 2 y enviarlos a la FPGA maestra mediante SPI. La maestra mantiene el estado oficial del juego, actualiza la lógica principal y genera la salida VGA. En este caso, la esclava funciona como una entrada remota implementada sobre FPGA.
 
-## 1. Resumen del proyecto
+El firmware de la esclava conserva una base común con los modos local, maestro y esclavo. Esto permite probar la lógica del juego por separado y mantener una integración ordenada con el sistema completo.
 
-- **Curso:** EL3313 — Taller de Diseño Digital, I Semestre 2026 (Prof. Luis G. León-Vega).
-- **Plataforma:** Nexys A7-100T (Artix-7 `xc7a100tcsg324-1`).
-- **Procesador:** MicroBlaze V (ISA **RISC-V**), bare-metal en C.
-- **Video:** VGA 640×480 generada desde un framebuffer lógico 160×120 (RGB444), doble buffer.
-- **Memoria:** DDR2 vía MIG (firmware + framebuffer + sprites + variables del juego).
-- **Comunicación entre FPGAs:** AXI Quad SPI sobre el conector **Pmod JA**.
-- **Almacenamiento:** microSD (FAT32, FatFs) para sprites/recursos — integración parcial.
+## Integrantes
 
-Hay **dos FPGAs** que corren firmware distinto:
+- Gerson Adrián Cordero Zúñiga
+- Keilin Tatiana Loaisiga Tellez
+- Nicole Irina Corrales Rodríguez
 
-| Rol | Serial JTAG | Qué hace |
-|-----|-------------|----------|
-| **Maestro** | `210292BB3406` | Corre la lógica del juego, genera SCK/CS/MOSI, recibe input de P2 por MISO |
-| **Esclavo** | `210292BB3145` | Lee controles de P2 y los envía por MISO; recibe el estado del juego por MOSI |
+## Alcance del repositorio
 
-`SW15` selecciona en ambas FPGAs el modo: **0 = solitario local**, **1 = multijugador SPI**.
+Este repositorio corresponde a la sección de la **FPGA esclava**. Los elementos principales incluidos y documentados son:
 
----
-
-## 2. Estado funcional actual
-
-✅ Funcionando:
-- VGA estable con doble buffer (sin parpadeo fuerte).
-- Pong **local** (dos jugadores en la misma FPGA).
-- Pong **multijugador SPI** (P2 controlado desde la FPGA esclava).
-- DDR2 probada y usada desde firmware (firmware en `0x80200000`, estado del juego en `0x80000000`).
-- Pacing por **vsync** en el modo multijugador del esclavo (corrige parpadeo) — último fix aplicado.
-
-⚠️ Puntos abiertos / a verificar:
-- **Imagen de la FPGA esclava**: tras reconstruir el bitstream del esclavo para corregir el SPI
-  (ver §6), hubo una regresión de imagen en algún build. Verificar que el bitstream del esclavo
-  en `artifacts/pong_slave.bit` muestra imagen correctamente y que el fix de MISO sigue activo.
-- **microSD**: el código (`sd_loader.c`, FatFs) se inicializa y carga recursos si la SD está
-  presente, pero la integración completa de recursos gráficos desde SD queda como pendiente.
-
----
-
-## 3. Estructura del repositorio
-
-```
-.
-├── rtl/                     # HDL sintetizable (Verilog)
-│   ├── top/                 #   top-level: system_io_wrapper (instancia el BD + acondiciona controles)
-│   ├── axi/  io/  memory/   #   puentes AXI, drivers de IO, memoria
-│   ├── video/  vram/        #   subsistema de video y VRAM
-├── ip/video_vram_axi_core/  # IP personalizado de video (VRAM ↔ VGA)
-├── sim/tb/                  # bancos de prueba
-├── constraints/             # XDC (pines, reloj)
-├── Top/el3313_proyecto2/    # configuración HoG (hog.conf, listas de fuentes)
-├── Hog/                     # framework HoG (submódulo)
-├── scripts/tcl/             # automatización Vivado/XSCT
-│   └── debug/               #   programar bitstream y cargar ELF por JTAG
-├── hw/spi_slave_bridge/     # scripts TCL del puente SPI del esclavo (reconstrucción BD)
-├── firmware/                # (versión histórica del firmware C bare-metal)
-├── workspace_new/           # workspace Vitis ACTUAL
-│   ├── pong_app/            #   firmware MAESTRO (game logic, renderer, SPI, SD)
-│   ├── pong_app_slave/      #   firmware ESCLAVO
-│   ├── el3313_platform/     #   plataforma + BSP (compartida master/slave)
-│   └── pong_app_system/     #   system project Vitis
-├── artifacts/               # bitstreams (.bit), firmware (.elf) y binarios (.bin) precompilados
-├── docs/                    # arquitectura, interfaces, reportes
-└── README.md                # este archivo
+```text
+- Sistema esclavo sobre Nexys A7-100T.
+- Firmware en lenguaje C.
+- Lectura de botones y switches locales.
+- Preparación de entradas del jugador 2.
+- Comunicación SPI con la FPGA maestra.
+- Construcción y validación de paquetes.
+- Soporte de modos local, maestro y esclavo en la lógica común.
+- Pruebas en PC usando stubs.
+- Reporte de recursos, latencia y reproducibilidad.
 ```
 
-> **Nota:** carpetas como `Projects/`, `bin/`, `workspace/`, `bd_check/`, `.Xil/`, logs de Vivado
-> y las entregas empaquetadas **no se incluyen** (son generadas/regenerables y pesadas).
+La salida VGA principal, la carga final de recursos gráficos y el estado oficial del juego corresponden a la FPGA maestra.
 
----
+## Estado validado
 
-## 4. Herramientas requeridas
+La parte esclava fue preparada para trabajar con la FPGA maestra mediante SPI. Se validaron principalmente los módulos de software relacionados con entradas, paquetes y modos de juego.
 
-- Ubuntu 22.04.5 LTS
-- **Vivado 2024.1**
-- **Vitis / Vitis HLS 2024.1**
-- HoG (incluido como submódulo)
-- Git / GitHub, VSCode, TerosHDL
+```text
+- Lectura de entradas locales.
+- Conversión de bits a controles de jugador.
+- Modo local.
+- Modo maestro.
+- Modo esclavo.
+- Construcción de paquetes de entrada.
+- Construcción de paquetes de estado.
+- Validación por checksum.
+- Rechazo de paquetes inválidos.
+- Simulación de envío y recepción usando stubs.
+```
 
----
+## Arquitectura general de la FPGA esclava
 
-## 5. Cómo compilar y cargar
+El flujo general de la FPGA esclava es:
 
-### 5.1 Bitstream (hardware) con HoG
+```text
+Botones / switches
+        ↓
+Input Driver
+        ↓
+Entrada del jugador 2
+        ↓
+Game Packet
+        ↓
+SPI Game
+        ↓
+FPGA maestra
+```
+
+En modo esclavo, la FPGA secundaria no decide el estado oficial de la partida. Su función es capturar las entradas locales, convertirlas en un paquete y enviarlas a la maestra. Si la maestra devuelve el estado oficial del juego, la esclava puede copiarlo localmente para mantenerse sincronizada.
+
+## Diagrama de bloques
+
+El diagrama de bloques del sistema se encuentra en el siguiente link:
+
+```text
+https://lucid.app/lucidspark/0ef90538-2468-44be-9708-132ea4711c6b/edit?viewport_loc=-5425%2C4150%2C8538%2C4069%2C0_0&invitationId=inv_f18cc9a0-747b-4162-b2db-b39aa12685f2
+```
+
+## Módulos principales del firmware
+
+| Módulo | Función principal |
+| ------ | ----------------- |
+| `game_config.h` | Constantes generales del juego. |
+| `player_input.h` | Estructura de entrada de jugador. |
+| `game_state.h` | Estado general del Pong. |
+| `input_driver.c/h` | Convierte bits de botones y switches en controles. |
+| `game_logic.c/h` | Movimiento, colisiones, puntaje y estados del juego. |
+| `game_app.c/h` | Coordina los modos local, maestro y esclavo. |
+| `game_packet.c/h` | Construye y valida paquetes de entrada y estado. |
+| `spi_game.c/h` | Interfaz SPI y stubs para pruebas. |
+| `game_background.c/h` | Interfaz base para recursos visuales o fondo. |
+
+La división por módulos facilita probar partes individuales antes de la integración con Vivado, Vitis y el hardware final.
+
+## Comunicación SPI esclava
+
+En el modo multijugador, la maestra genera el reloj SPI y selecciona a la esclava. La esclava responde enviando las entradas del jugador 2.
+
+```text
+SCK   maestro -> esclava
+MOSI  maestro -> esclava
+MISO  esclava -> maestra
+SS/CS maestro -> esclava
+GND   referencia común
+```
+
+La línea MISO es la más importante desde el lado de la esclava, porque por ella se envían los datos del jugador 2 hacia la maestra. Ambas placas deben compartir GND. No se debe conectar 3.3 V entre placas si cada una está alimentada por USB.
+
+## Reporte de latencia
+
+La latencia entre las dos FPGA tiene dos partes: la transferencia SPI y la latencia visible en pantalla.
+
+Para el enlace SPI se usó:
+
+```text
+SCK = 100 MHz / 16 = 6.25 MHz
+Duración por bit = 160 ns
+Paquete = 24 bytes = 192 bits
+Tiempo SPI puro = 192 × 160 ns = 30.7 us
+```
+
+Considerando el manejo por software, FIFO, selección de esclavo y sondeo, la latencia práctica de la transacción SPI se estima alrededor de:
+
+```text
+40 us a 55 us
+```
+
+La latencia jugador-a-pantalla depende de cuándo la maestra actualiza el juego y cuándo el VGA refresca la imagen. A 60 Hz:
+
+```text
+T_frame = 1 / 60 Hz ≈ 16.67 ms
+```
+
+Por eso, la respuesta visible del jugador 2 puede reflejarse aproximadamente entre 1 y 2 frames:
+
+```text
+Latencia percibida ≈ 16.7 ms a 33 ms
+```
+
+Resumen:
+
+| Etapa | Latencia aproximada |
+| ----- | ------------------: |
+| Transacción SPI pura | 30.7 us |
+| Transacción SPI práctica | 40 us a 55 us |
+| Latencia visible | 16.7 ms a 33 ms |
+
+## Reporte de recursos
+
+Los recursos corresponden al reporte de implementación de la FPGA esclava, con diseño `system_io_wrapper`, dispositivo Artix-7 `xc7a100tcsg324-1`.
+
+| Recurso | Usado | Disponible | Utilización |
+| ------ | ----: | ---------: | ----------: |
+| Slice LUTs | 7 979 | 63 400 | 12.59 % |
+| LUT como lógica | 7 304 | 63 400 | 11.52 % |
+| LUT como memoria | 675 | 19 000 | 3.55 % |
+| Slice Registers (FF) | 8 357 | 126 800 | 6.59 % |
+| Slices ocupados | 3 207 | 15 850 | 20.23 % |
+| Block RAM (RAMB36) | 56 | 135 | 41.48 % |
+| DSPs | 0 | 240 | 0 % |
+| IOB (pines) | 80 | 210 | 38.10 % |
+| Relojes (BUFGCTRL) | 9 | 32 | 28.13 % |
+| MMCM / PLL | 2 / 1 | 6 / 6 | 33.3 % / 16.7 % |
+
+La lectura rápida del reporte es que el recurso más exigido es la Block RAM, principalmente por memorias internas y memoria local del sistema. La lógica tiene bastante margen, con cerca de 13 % de LUTs y 7 % de registros. No se usan DSPs porque el Pong no requiere operaciones matemáticas pesadas.
+
+## Pruebas realizadas
+
+Se realizaron pruebas para revisar:
+
+```text
+- Movimiento de paletas.
+- Movimiento de pelota.
+- Rebotes contra bordes.
+- Colisiones con paletas.
+- Anotación de puntos.
+- Reinicio de ronda.
+- Estados de partida.
+- Modo local.
+- Modo maestro.
+- Modo esclavo.
+- Paquetes de entrada.
+- Paquetes de estado.
+- Checksum.
+- Rechazo de paquetes inválidos.
+- Simulación de SPI usando stubs.
+```
+
+## Compilación de pruebas en PC
+
+Ejemplo de compilación en Linux:
 
 ```bash
-./Hog/Do LIST
-./Hog/Do CREATE el3313_proyecto2
+gcc -Wall -Wextra -std=c11 \
+    -I sw/common \
+    sw/common/game_logic.c \
+    sw/common/game_app.c \
+    sw/common/input_driver.c \
+    sw/common/game_packet.c \
+    sw/common/spi_game.c \
+    sw/test/test_game_logic.c \
+    -o test_pong
+
+./test_pong
 ```
 
-El top-level real es **`system_io_wrapper`**, que instancia el wrapper del Block Design y entrega
-`INPUT_DRIVER[7:0]` ya sincronizado y filtrado (acondicionamiento de controles).
+Estas pruebas permiten revisar la lógica antes de llevarla completamente a hardware.
 
-### 5.2 Usar los binarios precompilados (camino rápido)
+## Cómo reproducir el proyecto
 
-En `artifacts/` ya están los binarios listos:
+Para reproducir el proyecto se necesita **Vivado y Vitis 2024.1** y **dos FPGAs Nexys A7-100T**, una que funciona como maestro y otra como esclavo, conectadas entre sí por el conector **Pmod JA**.
 
-| Archivo | Descripción |
-|---------|-------------|
-| `system_io_wrapper.bit` | Bitstream del **maestro** |
-| `pong_slave.bit` | Bitstream del **esclavo** |
-| `pong_app.elf` | Firmware del **maestro** |
-| `pong_app_slave.elf` | Firmware del **esclavo** |
-| `config.bin`, `sprites.bin` | Configuración y sprites para DDR2/SD |
+Primero clona el repositorio incluyendo sus submódulos (el framework HoG viene como submódulo, asi que es necesario descargarlo junto con el resto) y ve a la rama `main`, que contiene la versión completa del proyecto.
 
-### 5.3 Programar bitstream y cargar firmware (JTAG / XSCT)
+La forma más rápida de ponerlo en marcha es usar los **binarios precompilados** que están en la carpeta `artifacts/`: ahí se encuentran los bitstreams y los firmwares (`.elf`) tanto del maestro como del esclavo, junto con la configuración y los sprites. Solo hay que programar cada FPGA con su bitstream correspondiente y cargar su firmware por JTAG, usando los scripts de la carpeta `scripts/tcl/debug/` (hay un script para cada placa, identificada por su número de serie).
 
-```bash
-# Programar bitstream del maestro
-vivado -mode batch -source scripts/tcl/debug/program_master_3406.tcl
+Si en cambio se quiere **compilar todo desde cero**, el hardware se genera con HoG a partir de la configuración del proyecto, y el firmware se compila en Vitis creando una plataforma a partir del archivo de hardware exportado (`el3313_proyecto2_system_wrapper.xsa`) e importando las aplicaciones que están en `workspace_new/`.
 
-# Cargar el ELF del maestro
-xsdb scripts/tcl/debug/load_master_elf.tcl
+Una vez cargadas ambas FPGAs, el modo de juego se elige con el interruptor **`SW15`** en las dos placas: en `0` se juega en modo **local** (dos jugadores en una misma FPGA) y en `1` se activa el modo **multijugador por SPI**, donde el segundo jugador se controla desde la FPGA esclava. El resto de controles (start, reset y las barras) se manejan con los botones y switches de la placa maestra.
+
+## Enlaces
+
+Repositorio del grupo:
+
+```text
+https://github.com/nicolecr71/Proyecto-Final
 ```
 
-Scripts equivalentes para el esclavo están en `scripts/tcl/debug/` (cargar bit/ELF por su serial).
+Chats compartidos utilizados reporte de IA:
 
-> ⚠️ Si copian el proyecto a **otra ruta**, puede ser necesario ajustar las **rutas absolutas**
-> dentro de los scripts TCL.
-
-### 5.4 Importar en Vitis
-
-El hardware exportado está en `el3313_proyecto2_system_wrapper.xsa` (incluido en el paquete).
-Crear una plataforma a partir de ese `.xsa` y compilar las aplicaciones de `workspace_new/`.
-
----
-
-## 6. Arquitectura SPI (multijugador)
-
-### Pines físicos (Pmod JA, mismo XDC en ambas FPGAs)
-
-| Señal | Pin | Pmod |
-|-------|-----|------|
-| CS (ss)   | C17 | JA1 |
-| MOSI (io0)| D18 | JA2 |
-| MISO (io1)| E18 | JA3 |
-| SCK (sck) | G17 | JA4 |
-
-### Configuración del IP `axi_quad_spi_0`
-
-Ambas FPGAs usan **`Master_mode=1`**, `C_SCK_RATIO=16`, `C_NUM_SS_BITS=1`, FIFO=16, **SPI Mode 0**.
-
-> **Por qué importa (causa raíz histórica):** el esclavo originalmente tenía `Master_mode=0`
-> (slave-only). En ese modo el IP usa el puerto `SPISEL` como chip-select, pero ese pin no tenía
-> asignación XDC → **MISO nunca se activaba** → el maestro recibía solo ceros → P2 no se movía.
-> El fix fue poner el esclavo en `Master_mode=1` para que use `ss_i` (pin C17 vía IOBUF) como
-> slave-select. Los scripts del puente están en `hw/spi_slave_bridge/`.
-
-### Protocolo (24 bytes full-duplex, Mode 0)
-
-**Esclavo → Maestro (MISO):**
-```
-[0]=0x01 (INPUT)  [1]=frame_id  [2]=p2.up  [3]=p2.down
-[4]=p2.start      [5]=p2.reset  [6]=XOR[0..5]  [7..23]=0
+```text
+https://chatgpt.com/share/6a41f2e5-ad0c-83e8-b652-fdc6c690ef05
+https://chatgpt.com/share/6a4200b3-bbf0-83e8-9901-11ba4d9b90f9
+https://chatgpt.com/share/6a42c87b-8cfc-83e8-a823-677156f10351
 ```
 
-**Maestro → Esclavo (MOSI):**
+## Estado actual
+
+La FPGA esclava cuenta con una base de firmware preparada para leer entradas, construir paquetes y validar el comportamiento de los modos de juego. La integración final se realiza mediante SPI con la FPGA maestra.
+
+## Mejoras futuras
+
+```text
+- Integrar completamente el driver SPI real en Vitis.
+- Agregar depuración por UART.
+- Medir la latencia real con analizador lógico.
+- Documentar el cableado físico entre Pmods.
+- Agregar indicadores de estado para la conexión SPI.
 ```
-[0]=0x02 (STATE)  [1..2]=frame_id(LE)  [3..4]=ball_x  [5..6]=ball_y
-[7..8]=paddle_p1_y [9..10]=paddle_p2_y [11]=score_p1 [12]=score_p2
-[13]=status [14]=winner [15]=last_point [16..17]=elapsed_s
-[18]=serve_dir [19]=flags [20..22]=reservado [23]=XOR[0..22]
-```
 
----
+## Conclusión
 
-## 7. Controles físicos (FPGA maestra)
+La FPGA esclava permite extender el Pong a modo multijugador. Aunque no mantiene la salida VGA principal, cumple una función importante: capturar las entradas del jugador remoto y enviarlas a la FPGA maestra de forma ordenada y validada.
 
-| Control | Pin | Función |
-|---------|-----|---------|
-| CPU_RESETN | C12 | Reset completo del sistema |
-| SW0  | — | Reset de partida |
-| SW15 | — | Modo: 0 = solitario, 1 = multijugador SPI |
-| BTNC | N17 | Start |
-| BTNU | M18 | Barra izquierda arriba |
-| BTNL | P17 | Barra izquierda abajo |
-| BTNR | M17 | Barra derecha arriba (modo local) |
-| BTND | P18 | Barra derecha abajo (modo local) |
 
-Detalle completo en `docs/interfaces/controles_pong.md`.
-
----
-
-## 8. Mapa de memoria (DDR2)
-
-| Región | Dirección |
-|--------|-----------|
-| Firmware (ejecución) | `0x80200000` |
-| Estado del juego / app data | `0x80000000` (`DDR2_mig_0`) |
-
----
-
-## 9. Repositorio Git
-
-- **Remoto:** `github.com/nicolecr71/Proyecto-Final`
-- **Ramas:** `main`, `feature/slave`, `feature/microsd`, `fix/spi-slave-bridge` (último fix SPI/vsync).
-- **Convención de commits:** `tipo(alcance): descripción` (p. ej. `fix: ...`, `feat: ...`).
-
----
-
-## 10. Próximos pasos sugeridos
-
-1. Verificar imagen del **esclavo** con el bitstream actual y confirmar que el fix de MISO sigue OK.
-2. Completar la carga de recursos gráficos (sprites/imágenes) desde **microSD**.
-3. Documentar/automatizar el flujo de build del esclavo (BD del SPI + ELF) en un solo script.
+El video del proyecto se encuentra en el siguiente link:
+https://youtu.be/ioy0nAySmRk
