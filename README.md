@@ -226,6 +226,12 @@ Repositorio del grupo:
 ```text
 https://github.com/nicolecr71/Proyecto-Final
 ```
+Repositorio del grupo maestro:
+
+```text
+https://github.com/andreycch/el3313_proyecto2
+```
+
 
 Chats compartidos utilizados reporte de IA:
 
